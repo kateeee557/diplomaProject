@@ -1,0 +1,55 @@
+{% extends "layout.html" %}
+
+{% block title %}Create Assignment - Academic Blockchain{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Create New Assignment</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('teacher.create_assignment') }}">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Assignment Title</label>
+                        <input type="text" class="form-control" id="title" name="title" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="6" required></textarea>
+                        <div class="form-text">Provide clear instructions for students to complete the assignment.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="deadline" class="form-label">Deadline</label>
+                        <input type="datetime-local" class="form-control" id="deadline" name="deadline" required>
+                        <div class="form-text">Students will receive token rewards for on-time submissions.</div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
+                                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                    <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h5 class="alert-heading">Blockchain Integration</h5>
+                                <p class="mb-0">Student submissions will be recorded as NFTs on the blockchain. Grades will be immutably stored to ensure transparency and integrity. Students will earn 10 Academic Tokens for each on-time submission.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('teacher.manage_assignments') }}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Create Assignment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

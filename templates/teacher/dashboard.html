@@ -1,0 +1,129 @@
+{% extends "layout.html" %}
+
+{% block title %}Teacher Dashboard - Academic Blockchain{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
+                <h4 class="mb-0">My Assignments</h4>
+                <a href="{{ url_for('teacher.create_assignment') }}" class="btn btn-light">Create Assignment</a>
+            </div>
+            <div class="card-body">
+                {% if assignments %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Deadline</th>
+                            <th>Submissions</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for assignment in assignments %}
+                        <tr>
+                            <td>{{ assignment.title }}</td>
+                            <td>{{ assignment.deadline.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ assignment.submission_count }} / {{ assignment.student_count }}</td>
+                            <td>
+                                <a href="{{ url_for('teacher.view_submissions', assignment_id=assignment.id) }}" class="btn btn-sm btn-info">View Submissions</a>
+                                <a href="{{ url_for('teacher.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-warning">Edit</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <p>No assignments created yet.</p>
+                    <a href="{{ url_for('teacher.create_assignment') }}" class="btn btn-primary">Create Your First Assignment</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">Pending Grades</h4>
+            </div>
+            <div class="card-body">
+                {% if pending_submissions %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Assignment</th>
+                            <th>Submitted</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for submission in pending_submissions %}
+                        <tr>
+                            <td>{{ submission.student.name }}</td>
+                            <td>{{ submission.assignment.title }}</td>
+                            <td>{{ submission.submitted_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <a href="{{ url_for('teacher.grade_submission', submission_id=submission.id) }}" class="btn btn-sm btn-primary">Grade</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-center py-3">No pending submissions to grade.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0">Upload Document</h4>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('teacher.upload_document') }}" method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="document-name" class="form-label">Document Name</label>
+                        <input type="text" class="form-control" id="document-name" name="document_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="document-type" class="form-label">Document Type</label>
+                        <select class="form-select" id="document-type" name="document_type" required>
+                            <option value="syllabus">Syllabus</option>
+                            <option value="lecture">Lecture Notes</option>
+                            <option value="material">Study Material</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Select File</label>
+                        <input type="file" class="form-control" id="file" name="file" required>
+                    </div>
+                    <div class="alert alert-info small">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle me-1" viewBox="0 0 16 16">
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                            <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                        </svg>
+                        Your document will be stored as an NFT on the blockchain for verification and authenticity.
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Upload & Mint NFT</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

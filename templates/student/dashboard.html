@@ -1,0 +1,144 @@
+{% extends "layout.html" %}
+
+{% block title %}Student Dashboard - Academic Blockchain{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Upcoming Assignments</h4>
+                <a href="{{ url_for('student.view_assignments') }}" class="btn btn-sm btn-light">View All</a>
+            </div>
+            <div class="card-body">
+                {% if upcoming_assignments %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Deadline</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for assignment in upcoming_assignments %}
+                        <tr>
+                            <td>{{ assignment.title }}</td>
+                            <td>{{ assignment.deadline.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                {% if assignment.submitted %}
+                                <span class="badge bg-success">Submitted</span>
+                                {% else %}
+                                {% if assignment.deadline < now %}
+                                <span class="badge bg-danger">Overdue</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                                {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('student.submit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-primary">
+                                    {% if assignment.submitted %}View{% else %}Submit{% endif %}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-center py-3">No upcoming assignments at this time.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Recent Grades</h4>
+                <a href="{{ url_for('student.view_assignments') }}" class="btn btn-sm btn-light">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recent_grades %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                        <tr>
+                            <th>Assignment</th>
+                            <th>Submitted</th>
+                            <th>Grade</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for submission in recent_grades %}
+                        <tr>
+                            <td>{{ submission.assignment.title }}</td>
+                            <td>{{ submission.submitted_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ submission.grade }}</td>
+                            <td>
+                                <a href="{{ url_for('student.view_submission', submission_id=submission.id) }}" class="btn btn-sm btn-info">View</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-center py-3">No graded assignments yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0">My Tokens</h4>
+            </div>
+            <div class="card-body text-center">
+                <div class="display-4 mb-3">{{ token_balance }}</div>
+                <h5 class="mb-3">Academic Tokens (ACT)</h5>
+
+                <div class="progress mb-3">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ token_percentage }}%"></div>
+                </div>
+                <small class="text-muted">Earned by submitting assignments before deadlines</small>
+
+                <div class="d-grid mt-3">
+                    <a href="{{ url_for('student.view_tokens') }}" class="btn btn-outline-primary">View Token History</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0">Upload Document</h4>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('student.upload_document') }}" method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="document-name" class="form-label">Document Name</label>
+                        <input type="text" class="form-control" id="document-name" name="document_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Select File</label>
+                        <input type="file" class="form-control" id="file" name="file" required>
+                    </div>
+                    <div class="alert alert-info small">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle me-1" viewBox="0 0 16 16">
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                            <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                        </svg>
+                        Your document will be stored as an NFT on the blockchain for verification and authenticity.
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Upload & Mint NFT</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

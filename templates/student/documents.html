@@ -1,0 +1,140 @@
+{% extends "layout.html" %}
+
+{% block title %}My Documents - Academic Blockchain{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">My Documents</h4>
+                <a href="#upload-document" class="btn btn-light" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="upload-document">
+                    Upload Document
+                </a>
+            </div>
+
+            <div class="collapse" id="upload-document">
+                <div class="card-body border-bottom">
+                    <form action="{{ url_for('student.upload_document') }}" method="POST" enctype="multipart/form-data">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="document-name" class="form-label">Document Name</label>
+                                <input type="text" class="form-control" id="document-name" name="document_name" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="file" class="form-label">Select File</label>
+                                <input type="file" class="form-control" id="file" name="file" required>
+                            </div>
+                            <div class="col-md-4 mb-3 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">Upload & Mint NFT</button>
+                            </div>
+                        </div>
+                        <div class="alert alert-info small">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle me-1" viewBox="0 0 16 16">
+                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                            </svg>
+                            Your document will be stored as an NFT on the blockchain for verification and authenticity.
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card-body">
+                {% if documents %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Uploaded</th>
+                            <th>Blockchain Status</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for document in documents %}
+                        <tr>
+                            <td>{{ document.original_filename }}</td>
+                            <td>{{ document.document_type or "General" }}</td>
+                            <td>{{ document.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                {% if document.blockchain_tx %}
+                                <span class="badge bg-success">Verified</span>
+                                <span class="badge bg-info">NFT #{{ document.nft_token_id or "Pending" }}</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    {% if document.submission %}
+                                    <a href="{{ url_for('student.view_submission', submission_id=document.submission.id) }}" class="btn btn-sm btn-info">View Submission</a>
+                                    {% else %}
+                                    <a href="{{ url_for('blockchain.verify_document', document_id=document.id) }}" class="btn btn-sm btn-primary">Verify</a>
+                                    {% endif %}
+                                    <a href="#" class="btn btn-sm btn-secondary">Download</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-file-earmark text-muted mb-4" viewBox="0 0 16 16">
+                        <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
+                    </svg>
+                    <h4 class="text-muted">No documents uploaded yet</h4>
+                    <p class="text-muted">Upload documents to secure them as NFTs on the blockchain.</p>
+                    <button class="btn btn-primary" data-bs-toggle="collapse" data-bs-target="#upload-document" aria-expanded="false" aria-controls="upload-document">
+                        Upload Your First Document
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-info text-white">
+        <h4 class="mb-0">Document Verification</h4>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h5>What is Blockchain Verification?</h5>
+                <p>Each document you upload is stored as a Non-Fungible Token (NFT) on the blockchain, ensuring:</p>
+                <ul>
+                    <li><strong>Immutability:</strong> Once stored, your document cannot be changed</li>
+                    <li><strong>Ownership:</strong> Clear proof that you are the document author</li>
+                    <li><strong>Timestamp:</strong> Verifiable record of when the document was submitted</li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h5>How to Verify Documents</h5>
+                <p>To verify a document's authenticity:</p>
+                <ol>
+                    <li>Click the "Verify" button next to any document</li>
+                    <li>The system will check the document's hash against the blockchain record</li>
+                    <li>Results will show whether the document is verified and unchanged</li>
+                </ol>
+                <p>You can also view the blockchain transaction ID for each document for external verification.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Enable Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends "layout.html" %}
+
+{% block title %}My Assignments - Academic Blockchain{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">My Assignments</h4>
+    </div>
+    <div class="card-body">
+        {% if assignments %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Deadline</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for assignment in assignments %}
+                <tr>
+                    <td>{{ assignment.title }}</td>
+                    <td>{{ assignment.deadline.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>
+                        {% if assignment.submitted %}
+                        {% if assignment.submission.status == 'graded' %}
+                        <span class="badge bg-success">Graded: {{ assignment.submission.grade }}</span>
+                        {% else %}
+                        <span class="badge bg-info">Submitted</span>
+                        {% if assignment.submission.is_on_time() %}
+                        <span class="badge bg-success">On Time</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">Late</span>
+                        {% endif %}
+                        {% endif %}
+                        {% else %}
+                        {% if assignment.deadline < now %}
+                        <span class="badge bg-danger">Overdue</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">Pending</span>
+                        {% endif %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('student.submit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-primary">
+                            {% if assignment.submitted %}
+                            {% if assignment.submission.status == 'graded' %}
+                            View Submission
+                            {% else %}
+                            View Submission
+                            {% endif %}
+                            {% else %}
+                            Submit
+                            {% endif %}
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-clipboard-check text-muted mb-4" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M10.854 7.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 9.793l2.646-2.647a.5.5 0 0 1 .708 0z"/>
+                <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+                <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+            </svg>
+            <h4 class="text-muted">No assignments available</h4>
+            <p class="text-muted">You don't have any assignments yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header bg-info text-white">
+        <h4 class="mb-0">Blockchain Verification</h4>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <div class="d-flex">
+                <div class="me-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h5 class="alert-heading">Your Submissions Are Protected</h5>
+                    <p class="mb-0">All submissions are recorded on the blockchain as NFTs, ensuring transparency, immutability, and verifiable ownership. Submit before deadlines to earn Academic Tokens!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

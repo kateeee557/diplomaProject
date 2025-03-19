@@ -1,0 +1,154 @@
+{% extends "layout.html" %}
+
+{% block title %}Manage Assignments - Academic Blockchain{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+  <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+    <h4 class="mb-0">My Assignments</h4>
+    <a href="{{ url_for('teacher.create_assignment') }}" class="btn btn-light">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg me-1" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z"/>
+      </svg>
+      Create Assignment
+    </a>
+  </div>
+  <div class="card-body">
+    {% if assignments %}
+    <div class="table-responsive">
+      <table class="table table-striped">
+        <thead>
+        <tr>
+          <th>Title</th>
+          <th>Deadline</th>
+          <th>Created</th>
+          <th>Submissions</th>
+          <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for assignment in assignments %}
+        <tr>
+          <td>{{ assignment.title }}</td>
+          <td>
+            {{ assignment.deadline.strftime('%Y-%m-%d %H:%M') }}
+            {% set current_time = assignment.created_at.replace(microsecond=0) %}
+            {% if assignment.deadline < current_time %}
+            <span class="badge bg-danger">Expired</span>
+            {% endif %}
+          </td>
+          <td>{{ assignment.created_at.strftime('%Y-%m-%d') }}</td>
+          <td>
+            {{ assignment.submission_count }} / {{ assignment.student_count }}
+            <div class="progress mt-1" style="height: 5px;">
+              {% if assignment.student_count > 0 %}
+              {% set percentage = (assignment.submission_count / assignment.student_count * 100)|int %}
+              {% else %}
+              {% set percentage = 0 %}
+              {% endif %}
+              <div class="progress-bar" role="progressbar" style="width: {{ percentage }}%"></div>
+            </div>
+          </td>
+          <td>
+            <div class="btn-group">
+              <a href="{{ url_for('teacher.view_submissions', assignment_id=assignment.id) }}" class="btn btn-sm btn-info">View Submissions</a>
+              <a href="{{ url_for('teacher.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-warning">Edit</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-journal-text text-muted mb-4" viewBox="0 0 16 16">
+        <path d="M5 10.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z"/>
+        <path d="M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-12a2 2 0 0 1 2-2zm0 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3z"/>
+      </svg>
+      <h4 class="text-muted">No assignments created yet</h4>
+      <p class="text-muted">Create your first assignment to start receiving student submissions.</p>
+      <a href="{{ url_for('teacher.create_assignment') }}" class="btn btn-primary">
+        Create Your First Assignment
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header bg-info text-white">
+    <h4 class="mb-0">Assignment Statistics</h4>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-4 mb-3">
+        <div class="card border-0 bg-light">
+          <div class="card-body text-center">
+            <h1 class="display-4">{{ assignments|length }}</h1>
+            <p class="text-muted mb-0">Total Assignments</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 mb-3">
+        <div class="card border-0 bg-light">
+          <div class="card-body text-center">
+            <h1 class="display-4">
+              {% set total_submissions = 0 %}
+              {% for assignment in assignments %}
+              {% set total_submissions = total_submissions + assignment.submission_count %}
+              {% endfor %}
+              {{ total_submissions }}
+            </h1>
+            <p class="text-muted mb-0">Total Submissions</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 mb-3">
+        <div class="card border-0 bg-light">
+          <div class="card-body text-center">
+            <h1 class="display-4">
+              {% set pending_count = 0 %}
+              {% for assignment in assignments %}
+              {% for submission in assignment.submissions if submission.status == 'submitted' %}
+              {% set pending_count = pending_count + 1 %}
+              {% endfor %}
+              {% endfor %}
+              {{ pending_count }}
+            </h1>
+            <p class="text-muted mb-0">Pending Reviews</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-4">
+  <div class="card-header bg-success text-white">
+    <h4 class="mb-0">Blockchain Verification</h4>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-6">
+        <h5>Academic Integrity</h5>
+        <p>All student submissions are recorded on the blockchain as non-fungible tokens (NFTs), ensuring:</p>
+        <ul>
+          <li><strong>Timestamping:</strong> Precise record of when submissions were made</li>
+          <li><strong>Immutability:</strong> Once submitted, work cannot be altered</li>
+          <li><strong>Transparency:</strong> Clear record of all academic activities</li>
+        </ul>
+      </div>
+      <div class="col-md-6">
+        <h5>Token Incentives</h5>
+        <p>Students receive Academic Tokens for on-time submissions:</p>
+        <ul>
+          <li>10 tokens awarded for each submission before deadline</li>
+          <li>Tokens provide students with academic benefits</li>
+          <li>Incentive system encourages punctuality and engagement</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

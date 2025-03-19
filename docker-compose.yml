@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # Web Application Service
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+      - ./data:/app/data
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=sqlite:///academic_platform.db
+      - BLOCKCHAIN_PROVIDER=http://ganache:7545
+      - BLOCKCHAIN_ENABLED=true
+      - SECRET_KEY=supersecretkeyforsecurity
+    depends_on:
+      - ganache
+    networks:
+      - academic_network
+    restart: unless-stopped
+
+  # Blockchain Local Development Environment
+  ganache:
+    image: trufflesuite/ganache-cli:latest
+    ports:
+      - "7545:7545"
+    command: >
+      ganache-cli 
+      --host 0.0.0.0 
+      --port 7545 
+      --chainId 1337
+      --accounts 10 
+      --networkId 1337 
+      --deterministic 
+      --mnemonic "ribbon sphere smoke rough absorb dizzy farm radar coral undo maple deposit"
+    networks:
+      - academic_network
+    volumes:
+      - ./blockchain_data:/ganache_data
+    restart: unless-stopped
+
+  # Contract Deployment (runs once and exits)
+  truffle-migrate:
+    image: trufflesuite/truffle:latest
+    volumes:
+      - ./blockchain:/app
+    working_dir: /app
+    command: >
+      sh -c "
+        echo 'Waiting for Ganache to start...' &&
+        sleep 10 &&
+        truffle migrate --reset --network development
+      "
+    depends_on:
+      - ganache
+    networks:
+      - academic_network
+
+networks:
+  academic_network:
+    driver: bridge
+
+volumes:
+  blockchain_data:
