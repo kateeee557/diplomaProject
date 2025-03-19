@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>Grade Submission</h1>
+
+    <div class="submission-details">
+        <h2>Student Submission</h2>
+        <p>Student Name: {{ submission.student_name }}</p>
+        <p>Submission Date: {{ submission.submission_date }}</p>
+        <p>Assignment: {{ submission.assignment_name }}</p>
+
+        {% if submission.file_url %}
+        <div class="submission-file">
+            <a href="{{ submission.file_url }}" target="_blank">View Submitted File</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <form method="POST" action="{{ url_for('teacher.grade_submission', submission_id=submission.id) }}">
+        <div class="form-group">
+            <label for="grade">Grade</label>
+            <input type="number" class="form-control" id="grade" name="grade"
+                   min="0" max="100" value="{{ submission.grade or '' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="feedback">Feedback</label>
+            <textarea class="form-control" id="feedback" name="feedback" rows="4">
+                {{ submission.feedback or '' }}
+            </textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="blockchain_hash">Blockchain Hash</label>
+            <input type="text" class="form-control" id="blockchain_hash"
+                   value="{{ submission.blockchain_hash }}" readonly>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Submit Grade</button>
+    </form>
+</div>
+{% endblock %}
