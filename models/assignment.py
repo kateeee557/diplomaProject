@@ -9,14 +9,14 @@ class Assignment(db.Model):
     teacher_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationships
-    submissions = db.relationship('Submission', lazy=True)
+    # Relationships - use this to define the backref for Submission
+    submissions = db.relationship('Submission', backref='assignment_ref', lazy=True)
 
-    def is_active(self):  # Make sure this line is properly indented
+    def is_active(self):
         return datetime.utcnow() <= self.deadline
 
-    def submission_count(self):  # And this one too
+    def submission_count(self):
         return len(self.submissions)
 
-    def __repr__(self):  # And this one
+    def __repr__(self):
         return f'<Assignment {self.id}: {self.title}>'

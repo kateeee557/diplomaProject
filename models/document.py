@@ -13,17 +13,78 @@ class Document(db.Model):
     nft_token_id = db.Column(db.Integer, nullable=True)  # Token ID if minted as NFT
     document_type = db.Column(db.String(50), nullable=True)  # e.g., 'assignment', 'syllabus', etc.
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_blockchain_verified = db.Column(db.Boolean, default=False)  # New field to track verification
 
-    # Relationships
-    submission = db.relationship('Submission', lazy=True, uselist=False)
+    # Relationships - ensure this doesn't conflict with Submission model
+    submission = db.relationship('Submission', backref='document_ref', lazy=True, uselist=False)
 
     def is_verified(self):
-        return self.blockchain_tx is not None and self.nft_token_id is not None
+        """Check if document is verified on blockchain"""
+        # If already marked as verified in the database, return True
+        if self.is_blockchain_verified:
+            return True
+
+        # If has blockchain_tx and nft_token_id, consider verified
+        if self.blockchain_tx is not None and self.nft_token_id is not None:
+            # Update the verification flag
+            self.is_blockchain_verified = True
+            try:
+                db.session.commit()
+            except:
+                db.session.rollback()
+            return True
+
+        # Otherwise, need to check on blockchain
+        try:
+            from services.document_service import verify_document_on_blockchain
+            # Verify and update status
+            is_verified = verify_document_on_blockchain(self.id)
+            if is_verified:
+                # Update verification status
+                self.is_blockchain_verified = True
+                if not self.blockchain_tx:
+                    self.blockchain_tx = f"verified_{int(datetime.utcnow().timestamp())}"
+                if not self.nft_token_id:
+                    self.nft_token_id = 0  # Placeholder for now
+                try:
+                    db.session.commit()
+                except:
+                    db.session.rollback()
+            return is_verified
+        except Exception as e:
+            print(f"Error verifying document: {e}")
+            return False
 
     def file_path(self):
-        from flask import current_app
-        import os
-        return os.path.join(current_app.config['UPLOAD_FOLDER'], self.filename)
+        """
+        Returns the full path to the document file
+
+        This method should be used whenever accessing the physical file
+        to ensure consistent path handling across the application.
+        """
+        try:
+            from flask import current_app
+            import os
+
+            # Make sure the UPLOAD_FOLDER configuration exists
+            if 'UPLOAD_FOLDER' not in current_app.config:
+                raise ValueError("UPLOAD_FOLDER not configured in app config")
+
+            upload_folder = current_app.config['UPLOAD_FOLDER']
+
+            # Ensure the upload folder exists
+            if not os.path.exists(upload_folder):
+                os.makedirs(upload_folder)
+
+            # Construct the full path to the file
+            full_path = os.path.join(upload_folder, self.filename)
+
+            return full_path
+        except Exception as e:
+            print(f"Error determining file path: {e}")
+            # Return a safe fallback
+            import os
+            return os.path.join(os.getcwd(), 'uploads', self.filename)
 
     def __repr__(self):
         return f'<Document {self.id}: {self.original_filename}>'

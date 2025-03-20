@@ -4,6 +4,8 @@ from models.user import User
 from services.blockchain_service import get_blockchain_service
 import logging
 
+logger = logging.getLogger(__name__)
+
 def get_token_balance(user_id):
     """Get token balance for a user"""
     user = User.query.get(user_id)
@@ -13,14 +15,14 @@ def get_token_balance(user_id):
     try:
         # Try to get balance from blockchain
         blockchain = get_blockchain_service()
-
-        if blockchain.is_connected():
+        if blockchain:
             balance = blockchain.get_user_token_balance(user.blockchain_address)
             return balance
         else:
-            logging.warning("Blockchain service not connected, using database balance")
+            logger.warning("Blockchain service not available - using database balance")
     except Exception as e:
-        logging.error(f"Error getting token balance: {e}")
+        logger.error(f"Error getting token balance from blockchain: {e}")
+        logger.warning("Falling back to database balance")
 
     # Fallback to database balance
     transactions = TokenTransaction.query.filter_by(user_id=user_id).all()
@@ -33,25 +35,30 @@ def record_token_reward(user_id, amount, description, transaction_hash=None):
     try:
         user = User.query.get(user_id)
         if not user:
-            logging.error(f"User not found: {user_id}")
+            logger.error(f"User not found: {user_id}")
             return None
 
-        blockchain = get_blockchain_service()
         blockchain_tx = transaction_hash
 
-        # Record on blockchain if connected
-        if blockchain.is_connected() and user.blockchain_address:
-            try:
+        # Try to record on blockchain
+        try:
+            blockchain = get_blockchain_service()
+            if blockchain and user.blockchain_address:
+                # Record on blockchain
                 receipt = blockchain.track_token_earning(
                     user.blockchain_address,
                     amount,
                     description
                 )
 
-                if receipt['status'] == 1:  # Success
-                    blockchain_tx = receipt['transactionHash'].hex()
-            except Exception as e:
-                logging.error(f"Error recording token on blockchain: {e}")
+                if receipt and hasattr(receipt, 'transactionHash'):
+                    blockchain_tx = receipt.transactionHash.hex()
+                    logger.info(f"Token reward recorded on blockchain: {blockchain_tx}")
+            else:
+                logger.warning("Blockchain service not available - recording token reward in database only")
+        except Exception as e:
+            logger.error(f"Error recording token reward on blockchain: {e}")
+            logger.warning("Continuing with database-only token reward")
 
         # Create local transaction record
         transaction = TokenTransaction(
@@ -63,14 +70,18 @@ def record_token_reward(user_id, amount, description, transaction_hash=None):
         )
 
         db.session.add(transaction)
-
-        # Update user's token stats
-        user.update_token_stats(amount, 'reward')
-
         db.session.commit()
+
+        # Update user's total tokens earned
+        try:
+            user.total_tokens_earned += amount
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"Error updating user token stats: {e}")
+
         return transaction
     except Exception as e:
-        logging.error(f"Token reward error: {e}")
+        logger.error(f"Token reward error: {e}")
         db.session.rollback()
         return None
 
@@ -79,30 +90,34 @@ def record_token_spend(user_id, amount, description, transaction_hash=None):
     try:
         user = User.query.get(user_id)
         if not user:
-            logging.error(f"User not found: {user_id}")
+            logger.error(f"User not found: {user_id}")
             return None
-
-        blockchain = get_blockchain_service()
-        blockchain_tx = transaction_hash
 
         # Check if user has enough tokens
         current_balance = get_token_balance(user_id)
         if current_balance < amount:
-            logging.warning(f"Insufficient tokens for user {user_id}")
+            logger.warning(f"Insufficient tokens for user {user_id}")
             return None
 
-        # Record spend on blockchain if connected
-        if blockchain.is_connected() and user.blockchain_address:
-            try:
-                result = blockchain.token_tracker_contract.functions.spendTokens(
+        blockchain_tx = transaction_hash
+
+        # Try to record on blockchain
+        try:
+            blockchain = get_blockchain_service()
+            if blockchain and user.blockchain_address:
+                # Record on blockchain
+                blockchain.token_tracker_contract.functions.spendTokens(
                     user.blockchain_address,
                     amount,
                     description
                 ).transact({'from': blockchain.get_account()})
 
-                blockchain_tx = result.hex()
-            except Exception as e:
-                logging.error(f"Error spending tokens on blockchain: {e}")
+                logger.info(f"Token spend recorded on blockchain")
+            else:
+                logger.warning("Blockchain service not available - recording token spend in database only")
+        except Exception as e:
+            logger.error(f"Error recording token spend on blockchain: {e}")
+            logger.warning("Continuing with database-only token spend")
 
         # Create local transaction record
         transaction = TokenTransaction(
@@ -115,13 +130,16 @@ def record_token_spend(user_id, amount, description, transaction_hash=None):
 
         db.session.add(transaction)
 
-        # Update user's token stats
-        user.update_token_stats(amount, 'spend')
+        # Update user's total tokens spent
+        try:
+            user.total_tokens_spent += amount
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"Error updating user token stats: {e}")
 
-        db.session.commit()
         return transaction
     except Exception as e:
-        logging.error(f"Token spend error: {e}")
+        logger.error(f"Token spend error: {e}")
         db.session.rollback()
         return None
 

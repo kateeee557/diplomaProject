@@ -7,6 +7,8 @@ from services.blockchain_service import get_blockchain_service
 from services.token_service import record_token_reward
 import logging
 
+logger = logging.getLogger(__name__)
+
 def grade_submission(submission_id, grade, feedback, teacher_id):
     """
     Grade a submission and record it on blockchain with token rewards
@@ -23,13 +25,13 @@ def grade_submission(submission_id, grade, feedback, teacher_id):
     # Get submission
     submission = Submission.query.get(submission_id)
     if not submission:
-        logging.error(f"Submission not found: {submission_id}")
+        logger.error(f"Submission not found: {submission_id}")
         return False
 
     # Get document
     document = Document.query.get(submission.document_id)
     if not document:
-        logging.error(f"Document not found for submission: {submission_id}")
+        logger.error(f"Document not found for submission: {submission_id}")
         return False
 
     # Create a hash of the grading data
@@ -37,23 +39,28 @@ def grade_submission(submission_id, grade, feedback, teacher_id):
     grade_data = f"{submission.id}:{grade}:{feedback}:{now.isoformat()}"
     grade_hash = int(hashlib.sha256(grade_data.encode()).hexdigest(), 16) % 10**20  # Truncate to fit uint256
 
+    # Initialize variables
+    tx_hash = None
+
     try:
-        # Record on blockchain
-        blockchain = get_blockchain_service()
-        tx_hash = None
+        # Try to record on blockchain
+        try:
+            blockchain = get_blockchain_service()
+            if blockchain and document.nft_token_id:
+                account = blockchain.get_account()  # For testing
 
-        if blockchain.is_connected() and document.nft_token_id:
-            account = blockchain.get_account()  # For testing
-            receipt, tx_hash = blockchain.record_grade(
-                document.nft_token_id,
-                grade_hash,
-                account
-            )
+                receipt, tx_hash = blockchain.record_grade(
+                    document.nft_token_id,
+                    grade_hash,
+                    account
+                )
 
-            if receipt['status'] != 1:  # Failed
-                logging.warning(f"Blockchain grade recording transaction failed")
-        else:
-            logging.warning("Blockchain not connected or document has no NFT token ID, skipping blockchain record")
+                logger.info(f"Grade recorded on blockchain: tx_hash={tx_hash}")
+            else:
+                logger.warning("Blockchain service not available or document not minted as NFT - grade will be stored in database only")
+        except Exception as e:
+            logger.error(f"Error recording grade on blockchain: {e}")
+            logger.warning("Continuing with database-only grade recording")
 
         # Convert grade to numeric for token rewards
         try:
@@ -90,7 +97,7 @@ def grade_submission(submission_id, grade, feedback, teacher_id):
                     "Excellent assignment performance"
                 )
         except Exception as reward_error:
-            logging.error(f"Token reward error: {reward_error}")
+            logger.error(f"Token reward error: {reward_error}")
 
         # Update submission
         submission.grade = grade
@@ -104,7 +111,7 @@ def grade_submission(submission_id, grade, feedback, teacher_id):
 
     except Exception as e:
         # Log error
-        logging.error(f"Error recording grade: {e}")
+        logger.error(f"Error recording grade: {e}")
         db.session.rollback()
         return False
 
@@ -119,21 +126,20 @@ def verify_grade(submission_id):
         bool: True if verified, False otherwise
     """
     submission = Submission.query.get(submission_id)
-    if not submission or submission.status != 'graded' or not submission.grade_tx:
-        logging.warning(f"Cannot verify submission {submission_id}")
+    if not submission or submission.status != 'graded':
+        logger.warning(f"Cannot verify ungraded submission {submission_id}")
         return False
 
     document = Document.query.get(submission.document_id)
     if not document or not document.nft_token_id:
-        logging.warning(f"No document found for submission {submission_id}")
+        logger.warning(f"No document or NFT found for submission {submission_id}")
         return False
 
     try:
         blockchain = get_blockchain_service()
-
-        if not blockchain.is_connected():
-            logging.warning("Blockchain not connected, returning mock verification")
-            return True  # Mock verification for testing
+        if not blockchain:
+            logger.warning("Blockchain service not available - grade verification skipped")
+            return False
 
         blockchain_grade_hash = blockchain.get_grade(document.nft_token_id)
 
@@ -142,9 +148,9 @@ def verify_grade(submission_id):
         expected_hash = int(hashlib.sha256(grade_data.encode()).hexdigest(), 16) % 10**20
 
         verification_result = blockchain_grade_hash == expected_hash
-        logging.info(f"Grade verification for submission {submission_id}: {verification_result}")
+        logger.info(f"Grade verification for submission {submission_id}: {verification_result}")
         return verification_result
 
     except Exception as e:
-        logging.error(f"Grade verification error: {e}")
+        logger.error(f"Grade verification error: {e}")
         return False

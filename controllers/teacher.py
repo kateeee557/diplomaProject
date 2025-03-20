@@ -1,5 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session, send_from_directory
-from flask_login import login_required, current_user  # Correct Flask-Login import
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, send_from_directory, current_app
 from datetime import datetime
 import os
 from app import db
@@ -8,7 +7,7 @@ from models.assignment import Assignment
 from models.document import Document
 from models.submission import Submission
 from services.document_service import save_uploaded_file, verify_document_on_blockchain
-from services.grade_service import grade_submission, verify_grade
+from services.grade_service import grade_submission as grade_service, verify_grade
 
 teacher = Blueprint('teacher', __name__)
 
@@ -171,32 +170,43 @@ def view_submissions(assignment_id):
 
 @teacher.route('/grade_submission/<int:submission_id>', methods=['GET', 'POST'])
 def grade_submission(submission_id):
+    """Grade a student submission"""
     user = User.query.get(session['user_id'])
     submission = Submission.query.get_or_404(submission_id)
-    assignment = Assignment.query.get(submission.assignment_id)
+    assignment = submission.assignment_ref  # Changed from submission.assignment
 
     # Check if teacher owns this assignment
     if assignment.teacher_id != user.id:
         flash('You do not have permission to grade this submission', 'danger')
-        return redirect(url_for('teacher.manage_assignments'))
+        return redirect(url_for('teacher.dashboard'))
 
     if request.method == 'POST':
         grade_value = request.form['grade']
         feedback = request.form['feedback']
 
-        # Record grade
-        success = grade_submission(submission_id, grade_value, feedback, user.id)
+        # Basic validation
+        if not grade_value or not feedback:
+            flash('Both grade and feedback are required', 'warning')
+            return redirect(url_for('teacher.grade_submission', submission_id=submission_id))
 
-        if success:
-            flash('Submission graded successfully and recorded on blockchain!', 'success')
-        else:
-            flash('Error recording grade on blockchain', 'danger')
+        try:
+            # Call grade service to record the grade
+            success = grade_service(submission_id, grade_value, feedback, user.id)
 
-        return redirect(url_for('teacher.view_submissions', assignment_id=submission.assignment_id))
+            if success:
+                flash('Submission graded successfully and recorded on blockchain!', 'success')
+            else:
+                flash('Error recording grade. Please try again.', 'danger')
+
+            return redirect(url_for('teacher.view_submissions', assignment_id=assignment.id))
+        except Exception as e:
+            print(f"Error grading submission: {str(e)}")
+            flash(f'Error grading submission: {str(e)}', 'danger')
+            return redirect(url_for('teacher.grade_submission', submission_id=submission_id))
 
     # GET request - show grading form
-    student = User.query.get(submission.student_id)
-    document = Document.query.get(submission.document_id)
+    document = submission.document_ref  # Changed from submission.document
+    student = submission.student
 
     return render_template(
         'teacher/grade_submission.html',
@@ -211,19 +221,21 @@ def grade_submission(submission_id):
 def view_submission(submission_id):
     user = User.query.get(session['user_id'])
     submission = Submission.query.get_or_404(submission_id)
-    assignment = Assignment.query.get(submission.assignment_id)
+    assignment = submission.assignment_ref  # Changed from submission.assignment
 
     # Check if teacher owns this assignment
     if assignment.teacher_id != user.id:
         flash('You do not have permission to view this submission', 'danger')
         return redirect(url_for('teacher.manage_assignments'))
 
-    document = Document.query.get(submission.document_id)
-    student = User.query.get(submission.student_id)
+    document = submission.document_ref  # Changed from submission.document
+    student = submission.student
 
-    # Verify document and grade on blockchain
-    is_verified = verify_document_on_blockchain(document.id)
-    grade_verified = verify_grade(submission.id) if submission.status == 'graded' else None
+    # No need to verify on blockchain every time - use stored values
+    is_verified = document.is_blockchain_verified
+
+    # Only verify grade if the submission is already graded
+    grade_verified = submission.grade_verified if submission.status == 'graded' else None
 
     return render_template(
         'teacher/view_submission.html',
@@ -270,9 +282,8 @@ def view_documents():
     # Collect and sort recent submissions
     recent_submissions = []
     for assignment in assignments:
-        if hasattr(assignment, 'submissions'):
-            for submission in assignment.submissions:
-                recent_submissions.append(submission)
+        for submission in assignment.submissions:  # This still works because it's defined in Assignment
+            recent_submissions.append(submission)
 
     # Sort and limit to 5
     recent_submissions = sorted(
@@ -296,7 +307,7 @@ def upload_document():
     if request.method == 'POST':
         if 'file' not in request.files:
             flash('No file selected', 'danger')
-            return redirect(url_for('teacher.view_documents'))  # Changed from 'teacher.documents'
+            return redirect(url_for('teacher.view_documents'))
 
         file = request.files['file']
         document_name = request.form.get('document_name', file.filename)
@@ -304,7 +315,7 @@ def upload_document():
 
         if file.filename == '':
             flash('No file selected', 'danger')
-            return redirect(url_for('teacher.view_documents'))  # Changed from 'teacher.documents'
+            return redirect(url_for('teacher.view_documents'))
 
         document = save_uploaded_file(
             file=file,
@@ -317,7 +328,7 @@ def upload_document():
         else:
             flash('Error uploading document', 'danger')
 
-        return redirect(url_for('teacher.view_documents'))  # Changed from 'teacher.documents'
+        return redirect(url_for('teacher.view_documents'))
 
     return render_template('teacher/upload_document.html', user=user)
 
@@ -356,25 +367,41 @@ def delete_document(document_id):
 
 @teacher.route('/download_document/<int:document_id>')
 def download_document(document_id):
+    """Download a document file"""
     user = User.query.get(session['user_id'])
     document = Document.query.get_or_404(document_id)
 
     # Check if user has permission to download
-    if document.user_id != user.id:
-        submission = Submission.query.filter_by(document_id=document_id).first()
-        if not submission or submission.assignment.teacher_id != user.id:
-            flash('You do not have permission to download this document', 'danger')
-            return redirect(url_for('teacher.view_documents'))
+    # Teacher can download any document they uploaded OR any submission for their assignments
+    has_permission = False
+
+    # Check if teacher owns the document
+    if document.user_id == user.id:
+        has_permission = True
+
+    # Check if document is part of a submission for teacher's assignment
+    submission = Submission.query.filter_by(document_id=document_id).first()
+    if submission and submission.assignment_ref.teacher_id == user.id:  # Changed from submission.assignment
+        has_permission = True
+
+    if not has_permission:
+        flash('You do not have permission to download this document', 'danger')
+        return redirect(url_for('teacher.dashboard'))
 
     try:
+        file_path = document.file_path()  # This should return the full path to the file
+
+        if not os.path.exists(file_path):
+            flash('File not found on server', 'danger')
+            return redirect(url_for('teacher.dashboard'))
+
         return send_from_directory(
-            current_app.config['UPLOAD_FOLDER'],
-            document.filename,
+            os.path.dirname(file_path),
+            os.path.basename(file_path),
             as_attachment=True,
             download_name=document.original_filename
         )
     except Exception as e:
         print(f"Error downloading document: {str(e)}")
-        flash('Error downloading document', 'danger')
-        return redirect(url_for('teacher.view_documents'))
-
+        flash(f'Error downloading document: {str(e)}', 'danger')
+        return redirect(url_for('teacher.dashboard'))

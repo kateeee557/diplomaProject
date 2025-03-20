@@ -10,11 +10,17 @@ class BlockchainService:
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
 
-        # Check if blockchain is enabled in config
-        self.blockchain_enabled = current_app.config.get('BLOCKCHAIN_ENABLED', True)
+        # Initialize Web3 connection
+        provider_url = current_app.config['BLOCKCHAIN_PROVIDER']
 
-        if not self.blockchain_enabled:
-            self.logger.warning("Blockchain integration disabled in configuration")
+        # Default offline_mode to False
+        self.offline_mode = False
+
+        # If blockchain provider is empty or None, operate in offline mode
+        if not provider_url:
+            self.logger.warning("No blockchain provider specified, operating in offline mode")
+            self.w3 = None
+            self.offline_mode = True
             return
 
         try:

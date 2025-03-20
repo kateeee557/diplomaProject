@@ -37,3 +37,38 @@ eth-utils==2.0.0
 
 # Additional Dependencies
 hashlib==20081119
+
+# Flask and Extensions
+flask==2.1.0
+flask-sqlalchemy==2.5.1
+flask-migrate==3.1.0
+flask-wtf==1.0.0
+
+# Blockchain and Web3
+web3==5.28.0
+eth-account==0.5.9
+py-solc-x==1.1.1
+
+# Database
+psycopg2-binary==2.9.3
+SQLAlchemy==1.4.32
+
+# Security
+werkzeug==2.1.1
+python-dotenv==0.20.0
+
+# Development and Testing
+pytest==7.1.1
+coverage==6.3.2
+
+# Deployment
+gunicorn==20.1.0
+gevent==21.12.0
+
+# Utility
+python-dateutil==2.8.2
+uuid==1.30
+
+# Additional Blockchain Libraries
+eth-abi==2.2.0
+eth-utils==2.0.0

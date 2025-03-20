@@ -11,7 +11,7 @@ class DevelopmentConfig(Config):
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Blockchain configuration
-    BLOCKCHAIN_PROVIDER = 'http://127.0.0.1:7545'  # Local Ganache
+    BLOCKCHAIN_PROVIDER = 'HTTP://127.0.0.1:7545'  # Local Ganache
 
     # Test contract addresses (fake addresses for development)
     TOKEN_CONTRACT_ADDRESS = '0x1234567890123456789012345678901234567890'  # Placeholder address

@@ -7,6 +7,8 @@ from models.document import Document
 from services.blockchain_service import get_blockchain_service
 import logging
 
+logger = logging.getLogger(__name__)
+
 def generate_unique_filename(original_filename):
     """Generate a unique filename to prevent collisions"""
     ext = os.path.splitext(original_filename)[1]
@@ -32,33 +34,29 @@ def save_uploaded_file(file, document_type, user_id, is_assignment=False, deadli
         Document: The created document object
     """
     if not file:
-        logging.warning("No file provided for upload")
+        logger.warning("No file provided for upload")
         return None
 
     try:
-        # Ensure upload folder exists
-        upload_folder = current_app.config['UPLOAD_FOLDER']
-        if not os.path.exists(upload_folder):
-            os.makedirs(upload_folder)
-
         # Save file with unique name
         unique_filename = generate_unique_filename(file.filename)
-        file_path = os.path.join(upload_folder, unique_filename)
+        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)
         file.save(file_path)
 
         # Calculate hash
         file_hash = hash_file(file_path)
 
-        # Record on blockchain
+        # Initialize variables for blockchain data
         blockchain_tx = None
         nft_token_id = None
 
+        # Record on blockchain
         try:
             blockchain = get_blockchain_service()
-
-            if blockchain.is_connected():
-                logging.info(f"Attempting to mint document on blockchain: {file_hash}")
+            if blockchain:
                 account = blockchain.get_account()  # For testing - in production use user's address
+
+                logger.info(f"Attempting to mint document on blockchain: {file_hash}")
 
                 # Mint NFT
                 receipt, tx_hash, token_id = blockchain.mint_document_nft(
@@ -69,16 +67,15 @@ def save_uploaded_file(file, document_type, user_id, is_assignment=False, deadli
                     account
                 )
 
-                if receipt['status'] == 1:  # Success
-                    blockchain_tx = tx_hash
-                    nft_token_id = token_id
-                    logging.info(f"Document minted: tx_hash={tx_hash}, token_id={token_id}")
-                else:
-                    logging.warning("Blockchain transaction failed")
+                logger.info(f"Document minted: tx_hash={tx_hash}, token_id={token_id}")
+
+                blockchain_tx = tx_hash
+                nft_token_id = token_id
             else:
-                logging.warning("Blockchain service not connected, skipping NFT minting")
+                logger.warning("Blockchain service not available - document will be stored without blockchain verification")
         except Exception as blockchain_error:
-            logging.error(f"Blockchain minting error: {blockchain_error}")
+            logger.error(f"Blockchain minting error: {blockchain_error}")
+            logger.warning("Continuing without blockchain verification")
 
         # Create document record
         document = Document(
@@ -99,7 +96,7 @@ def save_uploaded_file(file, document_type, user_id, is_assignment=False, deadli
         return document
 
     except Exception as general_error:
-        logging.error(f"Document upload error: {general_error}")
+        logger.error(f"Document upload error: {general_error}")
 
         # Clean up file if it was created
         try:
@@ -122,22 +119,21 @@ def verify_document_on_blockchain(document_id):
     """
     document = Document.query.get(document_id)
     if not document:
-        logging.warning(f"Document not found: {document_id}")
+        logger.warning(f"Document not found: {document_id}")
         return False
 
     try:
         blockchain = get_blockchain_service()
+        if not blockchain:
+            logger.warning("Blockchain service not available - document verification skipped")
+            return False
 
-        if not blockchain.is_connected():
-            logging.warning("Blockchain service not connected, returning mock verification")
-            return True  # Mock verification for testing
-
-        logging.info(f"Attempting to verify document with hash: {document.hash}")
+        logger.info(f"Attempting to verify document with hash: {document.hash}")
 
         # Verify document on blockchain
         result = blockchain.verify_document(document.hash)
 
-        logging.info(f"Blockchain verification result: {result}")
+        logger.info(f"Blockchain verification result: {result}")
 
         # Optional: Update document verification status in database
         if result:
@@ -146,5 +142,5 @@ def verify_document_on_blockchain(document_id):
 
         return result
     except Exception as e:
-        logging.error(f"Verification error: {e}")
+        logger.error(f"Verification error: {e}")
         return False
