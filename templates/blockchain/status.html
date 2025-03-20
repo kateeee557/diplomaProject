@@ -1,0 +1,156 @@
+{% extends "layout.html" %}
+
+{% block title %}Blockchain Status - Academic Blockchain{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h4 class="mb-0">Blockchain Status</h4>
+    </div>
+    <div class="card-body">
+        {% if status.connected %}
+        <div class="alert alert-success">
+            <div class="d-flex align-items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-check-circle-fill me-2" viewBox="0 0 16 16">
+                    <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+                </svg>
+                <h5 class="mb-0">Connected to Blockchain</h5>
+            </div>
+            <div class="mt-2 ms-4">
+                <p><strong>Provider:</strong> {{ status.provider }}</p>
+            </div>
+        </div>
+
+        <h5 class="mt-4">Smart Contracts</h5>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                <tr>
+                    <th>Contract</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>Token Contract (ERC20)</td>
+                    <td>
+                        {% if status.contracts.token %}
+                        <span class="badge bg-success">Connected</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">Not Connected</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Document NFT Contract (ERC721)</td>
+                    <td>
+                        {% if status.contracts.document %}
+                        <span class="badge bg-success">Connected</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">Not Connected</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>User Wallet Factory</td>
+                    <td>
+                        {% if status.contracts.wallet_factory %}
+                        <span class="badge bg-success">Connected</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">Not Connected</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Token Tracker</td>
+                    <td>
+                        {% if status.contracts.token_tracker %}
+                        <span class="badge bg-success">Connected</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">Not Connected</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-warning">
+            <div class="d-flex align-items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill me-2" viewBox="0 0 16 16">
+                    <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+                </svg>
+                <h5 class="mb-0">Not Connected to Blockchain</h5>
+            </div>
+            <div class="mt-2 ms-4">
+                <p>{{ status.message }}</p>
+                {% if status.error %}
+                <p class="text-danger"><strong>Error:</strong> {{ status.error }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="alert alert-info mt-3">
+            <div class="d-flex">
+                <div class="me-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h5 class="alert-heading">The application is running in offline mode</h5>
+                    <p class="mb-0">When offline, the system simulates blockchain operations and stores all data in the local database. This allows you to test and use the application features without a blockchain connection.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <h5>Troubleshooting</h5>
+            <ol>
+                <li>Make sure <strong>Ganache</strong> is running on port 7545</li>
+                <li>Check that blockchain contracts are deployed (should happen automatically when the application starts)</li>
+                <li>Review the application logs for any blockchain-related errors</li>
+                <li>Try restarting the application</li>
+            </ol>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if status.connected %}
+<div class="card mt-4">
+    <div class="card-header bg-info text-white">
+        <h4 class="mb-0">Contract Details</h4>
+    </div>
+    <div class="card-body">
+        <p>The following smart contracts are currently deployed:</p>
+        <ul>
+            <li><strong>AcademicToken (ERC20)</strong>: Manages the academic token system that rewards students for on-time submissions and academic excellence</li>
+            <li><strong>DocumentNFT (ERC721)</strong>: Creates non-fungible tokens for each document to ensure immutability and verification</li>
+            <li><strong>UserWalletFactory</strong>: Creates blockchain wallets for users of the platform</li>
+            <li><strong>UserTokenTracker</strong>: Tracks token earnings and spending for each user</li>
+        </ul>
+
+        <div class="alert alert-success mt-3">
+            <div class="d-flex">
+                <div class="me-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-shield-check" viewBox="0 0 16 16">
+                        <path d="M5.338 1.59a61.44 61.44 0 0 0-2.837.856.481.481 0 0 0-.328.39c-.554 4.157.726 7.19 2.253 9.188a10.725 10.725 0 0 0 2.287 2.233c.346.244.652.42.893.533.12.057.218.095.293.118a.55.55 0 0 0 .101.025.615.615 0 0 0 .1-.025c.076-.023.174-.061.294-.118.24-.113.547-.29.893-.533a10.726 10.726 0 0 0 2.287-2.233c1.527-1.997 2.807-5.031 2.253-9.188a.48.48 0 0 0-.328-.39c-.651-.213-1.75-.56-2.837-.855C9.552 1.29 8.531 1.067 8 1.067c-.53 0-1.552.223-2.662.524zM5.072.56C6.157.265 7.31 0 8 0s1.843.265 2.928.56c1.11.3 2.229.655 2.887.87a1.54 1.54 0 0 1 1.044 1.262c.596 4.477-.787 7.795-2.465 9.99a11.775 11.775 0 0 1-2.517 2.453 7.159 7.159 0 0 1-1.048.625c-.28.132-.581.24-.829.24s-.548-.108-.829-.24a7.158 7.158 0 0 1-1.048-.625 11.777 11.777 0 0 1-2.517-2.453C1.928 10.487.545 7.169 1.141 2.692A1.54 1.54 0 0 1 2.185 1.43 62.456 62.456 0 0 1 5.072.56z"/>
+                        <path d="M10.854 5.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 7.793l2.646-2.647a.5.5 0 0 1 .708 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h5 class="alert-heading">Blockchain Integration Active</h5>
+                    <p class="mb-0">All blockchain features are active. Documents will be minted as NFTs, grades will be recorded on-chain, and tokens will be awarded through smart contracts.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="mt-4 text-end">
+    <a href="{{ url_for('auth.index') }}" class="btn btn-primary">Back to Dashboard</a>
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "layout.html" %}
+
+{% block title %}500 - Server Error - Academic Blockchain{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 text-center py-5">
+    <div class="mb-4">
+      <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" fill="currentColor" class="bi bi-exclamation-triangle text-danger" viewBox="0 0 16 16">
+        <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+      </svg>
+    </div>
+    <h1 class="display-4 mb-4">500 - Server Error</h1>
+    <p class="lead mb-4">Something went wrong on our end. This is not your fault.</p>
+
+    <div class="card mb-4">
+      <div class="card-body bg-light">
+        <p>What you can do:</p>
+        <ul class="text-start">
+          <li>Try again in a few minutes</li>
+          <li>Refresh the page</li>
+          <li>Contact the system administrator if the problem persists</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-center gap-3">
+      <a href="{{ url_for('auth.index') }}" class="btn btn-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-house-door me-1" viewBox="0 0 16 16">
+          <path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146ZM2.5 14V7.707l5.5-5.5 5.5 5.5V14H10v-4a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5v4H2.5Z"/>
+        </svg>
+        Go to Home Page
+      </a>
+      <button onclick="location.reload()" class="btn btn-outline-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise me-1" viewBox="0 0 16 16">
+          <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+          <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+        </svg>
+        Refresh Page
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-md-8 mx-auto">
+    <div class="card">
+      <div class="card-header bg-primary text-white">
+        <h4 class="mb-0">Technical Information</h4>
+      </div>
+      <div class="card-body">
+        <p>There might be an issue with:</p>
+        <ul>
+          <li>Database connection</li>
+          <li>Blockchain connection</li>
+          <li>Server resources</li>
+          <li>Application code</li>
+        </ul>
+        <p>The error has been logged and the development team has been notified.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

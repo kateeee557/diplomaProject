@@ -1,0 +1,63 @@
+{% extends "layout.html" %}
+
+{% block title %}404 - Page Not Found - Academic Blockchain{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 text-center py-5">
+    <div class="mb-4">
+      <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" fill="currentColor" class="bi bi-exclamation-circle text-warning" viewBox="0 0 16 16">
+        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+        <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
+      </svg>
+    </div>
+    <h1 class="display-4 mb-4">404 - Page Not Found</h1>
+    <p class="lead mb-4">The page you were looking for doesn't exist or has been moved.</p>
+
+    <div class="card mb-4">
+      <div class="card-body bg-light">
+        <p>Possible reasons:</p>
+        <ul class="text-start">
+          <li>The URL might be misspelled</li>
+          <li>The page might have been removed or renamed</li>
+          <li>You might not have permission to view this page</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-center gap-3">
+      <a href="{{ url_for('auth.index') }}" class="btn btn-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-house-door me-1" viewBox="0 0 16 16">
+          <path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146ZM2.5 14V7.707l5.5-5.5 5.5 5.5V14H10v-4a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5v4H2.5Z"/>
+        </svg>
+        Go to Home Page
+      </a>
+      <button onclick="history.back()" class="btn btn-outline-secondary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left me-1" viewBox="0 0 16 16">
+          <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+        </svg>
+        Go Back
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-md-8 mx-auto">
+    <div class="card">
+      <div class="card-header bg-primary text-white">
+        <h4 class="mb-0">Academic Blockchain Platform</h4>
+      </div>
+      <div class="card-body">
+        <p>If you believe this is an error, please contact the system administrator. You might need blockchain verification to access certain parts of the system.</p>
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="badge bg-primary">Transparency</span>
+          <span class="badge bg-success">Integrity</span>
+          <span class="badge bg-info">Security</span>
+          <span class="badge bg-warning text-dark">Innovation</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
