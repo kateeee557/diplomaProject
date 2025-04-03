@@ -68,9 +68,9 @@
             <div class="d-flex">
                 {% if session.user_id %}
                 <span class="navbar-text me-3">Welcome, {{ session.name }}</span>
-                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-light">Logout</a>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-light">Log out</a>
                 {% else %}
-                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light me-2">Login</a>
+                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light me-2">Log in</a>
                 <a href="{{ url_for('auth.register') }}" class="btn btn-light">Register</a>
                 {% endif %}
             </div>
