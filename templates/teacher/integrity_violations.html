@@ -1,0 +1,70 @@
+{% extends "layout.html" %}
+
+{% block title %}Integrity Violations - Academic Blockchain{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-danger text-white">
+        <h4 class="mb-0">Integrity Violations</h4>
+    </div>
+    <div class="card-body">
+        {% if violations %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                <tr>
+                    <th>Original Document</th>
+                    <th>Attempted Document</th>
+                    <th>Violation Type</th>
+                    <th>Similarity</th>
+                    <th>Attempted At</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for violation in violations %}
+                <tr class="{{ 'table-warning' if not violation.reviewed else '' }}">
+                    <td>
+                        <a href="{{ url_for('teacher.view_document', document_id=violation.original_document_id) }}" class="btn btn-sm btn-info">
+                            {{ violation.original_document.original_filename }}
+                        </a>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('teacher.view_document', document_id=violation.attempted_document_id) }}" class="btn btn-sm btn-warning">
+                            {{ violation.attempted_document.original_filename }}
+                        </a>
+                    </td>
+                    <td>{{ violation.violation_type }}</td>
+                    <td>{{ violation.similarity_percentage|round(2) }}%</td>
+                    <td>{{ violation.attempted_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>
+                        {% if violation.reviewed %}
+                        <span class="badge bg-success">Reviewed</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if not violation.reviewed %}
+                        <form action="{{ url_for('teacher.review_violation', violation_id=violation.id) }}" method="POST" class="d-inline">
+                            <textarea name="notes" class="form-control mb-2" placeholder="Review notes (optional)"></textarea>
+                            <button type="submit" class="btn btn-sm btn-primary">Mark as Reviewed</button>
+                        </form>
+                        {% else %}
+                        <button class="btn btn-sm btn-secondary" disabled>Reviewed</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info text-center">
+            <p>No integrity violations detected.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
