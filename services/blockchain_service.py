@@ -10,28 +10,44 @@ class BlockchainService:
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
 
+        # Default settings for offline mode
+        self.offline_mode = True
+        self.blockchain_enabled = False
+        self.w3 = None
+        self.token_contract = None
+        self.document_contract = None
+        self.wallet_factory_contract = None
+        self.token_tracker_contract = None
+        self.token_address = None
+        self.document_address = None
+        self.wallet_factory_address = None
+        self.token_tracker_address = None
+
+        # Check if blockchain is enabled in config
+        if not current_app.config.get('BLOCKCHAIN_ENABLED', False):
+            self.logger.info("Blockchain is disabled in config, operating in offline mode")
+            return
+
         # Initialize Web3 connection
         provider_url = current_app.config['BLOCKCHAIN_PROVIDER']
-
-        # Default offline_mode to False
-        self.offline_mode = False
 
         # If blockchain provider is empty or None, operate in offline mode
         if not provider_url:
             self.logger.warning("No blockchain provider specified, operating in offline mode")
-            self.w3 = None
-            self.offline_mode = True
             return
 
         try:
             # Initialize Web3 connection
-            provider_url = current_app.config['BLOCKCHAIN_PROVIDER']
             self.w3 = Web3(Web3.HTTPProvider(provider_url))
 
             # Validate blockchain connection
             if not self.w3.is_connected():
                 self.logger.error("Failed to connect to blockchain provider")
-                raise ConnectionError("Blockchain connection failed")
+                return  # Stay in offline mode instead of raising exception
+
+            # Connection successful - set flags
+            self.offline_mode = False
+            self.blockchain_enabled = True
 
             # Load contract ABIs
             abis_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'blockchain', 'abis')
@@ -82,8 +98,8 @@ class BlockchainService:
                     address=self.token_address,
                     abi=self.token_abi
                 )
-            except:
-                self.logger.error("Failed to initialize token contract")
+            except Exception as e:
+                self.logger.error(f"Failed to initialize token contract: {e}")
                 self.token_contract = None
 
             try:
@@ -91,8 +107,8 @@ class BlockchainService:
                     address=self.document_address,
                     abi=self.document_abi
                 )
-            except:
-                self.logger.error("Failed to initialize document contract")
+            except Exception as e:
+                self.logger.error(f"Failed to initialize document contract: {e}")
                 self.document_contract = None
 
             try:
@@ -100,8 +116,8 @@ class BlockchainService:
                     address=self.wallet_factory_address,
                     abi=self.wallet_factory_abi
                 )
-            except:
-                self.logger.error("Failed to initialize wallet factory contract")
+            except Exception as e:
+                self.logger.error(f"Failed to initialize wallet factory contract: {e}")
                 self.wallet_factory_contract = None
 
             try:
@@ -109,18 +125,26 @@ class BlockchainService:
                     address=self.token_tracker_address,
                     abi=self.token_tracker_abi
                 )
-            except:
-                self.logger.error("Failed to initialize token tracker contract")
+            except Exception as e:
+                self.logger.error(f"Failed to initialize token tracker contract: {e}")
                 self.token_tracker_contract = None
 
         except Exception as e:
             self.logger.error(f"Blockchain service initialization error: {e}")
+            # Make sure we're in offline mode if there was an error
             self.w3 = None
             self.blockchain_enabled = False
+            self.offline_mode = True
 
     def is_connected(self):
         """Check if blockchain service is connected and operational"""
-        return self.blockchain_enabled and self.w3 is not None and self.w3.is_connected()
+        if self.w3 is None or not self.blockchain_enabled:
+            return False
+
+        try:
+            return self.w3.is_connected()
+        except:
+            return False
 
     def get_account(self, index=0):
         """Get account from the connected node (for testing)"""

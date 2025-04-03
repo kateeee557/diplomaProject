@@ -126,6 +126,7 @@ def create_test_data():
             logger.error(f"Error creating test data: {e}")
             db.session.rollback()
 
+# In the run_database_migrations function or similar:
 def run_database_migrations():
     """
     Run database migrations

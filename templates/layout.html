@@ -37,7 +37,9 @@
                 <li class="nav-item">
                     <a class="nav-link {% if request.endpoint == 'student.view_tokens' %}active{% endif %}" href="{{ url_for('student.view_tokens') }}">My Tokens</a>
                 </li>
-                {% elif session.role == 'teacher' %}
+                {% endif %}
+
+                {% if session.role == 'teacher' %}
                 <li class="nav-item">
                     <a class="nav-link {% if request.endpoint == 'teacher.dashboard' %}active{% endif %}" href="{{ url_for('teacher.dashboard') }}">Dashboard</a>
                 </li>
@@ -50,17 +52,25 @@
                 <li class="nav-item">
                     <a class="nav-link {% if request.endpoint == 'teacher.view_documents' %}active{% endif %}" href="{{ url_for('teacher.view_documents') }}">Documents</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'teacher.view_integrity_violations' %}active{% endif %}" href="{{ url_for('teacher.view_integrity_violations') }}">
+                        Integrity
+                        {% if violation_count > 0 %}
+                        <span class="badge bg-danger">{{ violation_count }}</span>
+                        {% endif %}
+                    </a>
+                </li>
                 {% endif %}
 
                 <!-- Blockchain status indicator -->
                 <li class="nav-item">
                     <a class="nav-link {% if request.endpoint == 'blockchain.blockchain_status' %}active{% endif %}" href="{{ url_for('blockchain.blockchain_status') }}">
-                        <span id="blockchain-status-indicator" class="blockchain-status-unknown">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-hdd-network" viewBox="0 0 16 16">
-                                <path d="M4.5 5.1a.5.5 0 0 0-.5.5v1a.5.5 0 0 1-1 0v-1A1.5 1.5 0 0 1 4.5 4h7A1.5 1.5 0 0 1 13 5.5v1a.5.5 0 0 1-1 0v-1a.5.5 0 0 0-.5-.5h-7zM4.5 10.1a.5.5 0 0 0-.5.5v1a.5.5 0 0 1-1 0v-1A1.5 1.5 0 0 1 4.5 9h7A1.5 1.5 0 0 1 13 10.5v1a.5.5 0 0 1-1 0v-1a.5.5 0 0 0-.5-.5h-7zM0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm0 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-1zm6.5-7a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm0 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
-                            </svg>
-                            Blockchain
-                        </span>
+                            <span id="blockchain-status-indicator" class="blockchain-status-unknown">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-hdd-network" viewBox="0 0 16 16">
+                                    <path d="M4.5 5.1a.5.5 0 0 0-.5.5v1a.5.5 0 0 1-1 0v-1A1.5 1.5 0 0 1 4.5 4h7A1.5 1.5 0 0 1 13 5.5v1a.5.5 0 0 1-1 0v-1a.5.5 0 0 0-.5-.5h-7zM4.5 10.1a.5.5 0 0 0-.5.5v1a.5.5 0 0 1-1 0v-1A1.5 1.5 0 0 1 4.5 9h7A1.5 1.5 0 0 1 13 10.5v1a.5.5 0 0 1-1 0v-1a.5.5 0 0 0-.5-.5h-7zM0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm0 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-1zm6.5-7a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm0 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+                                </svg>
+                                Blockchain
+                            </span>
                     </a>
                 </li>
                 {% endif %}

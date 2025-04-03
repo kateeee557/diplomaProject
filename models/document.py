@@ -8,15 +8,20 @@ class Document(db.Model):
     original_filename = db.Column(db.String(255), nullable=False)  # Original upload name
     file_type = db.Column(db.String(50), nullable=False)  # MIME type
     file_size = db.Column(db.Integer, nullable=False)  # Size in bytes
-    hash = db.Column(db.String(64), nullable=False)  # SHA-256 hash
+    hash = db.Column(db.String(64), nullable=False, unique=True)  # SHA-256 hash, now with unique constraint
     blockchain_tx = db.Column(db.String(66), nullable=True)  # Transaction hash
     nft_token_id = db.Column(db.Integer, nullable=True)  # Token ID if minted as NFT
     document_type = db.Column(db.String(50), nullable=True)  # e.g., 'assignment', 'syllabus', etc.
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
-    is_blockchain_verified = db.Column(db.Boolean, default=False)  # New field to track verification
+    is_blockchain_verified = db.Column(db.Boolean, default=False)  # Verification status
 
     # Relationships - ensure this doesn't conflict with Submission model
     submission = db.relationship('Submission', backref='document_ref', lazy=True, uselist=False)
+
+    # New relationship for integrity violations
+    violations = db.relationship('IntegrityViolation',
+                                 foreign_keys='IntegrityViolation.original_document_id',
+                                 backref='duplicate_of', lazy=True)
 
     def is_verified(self):
         """Check if document is verified on blockchain"""

@@ -19,6 +19,44 @@ def hash_file(file_path):
     with open(file_path, 'rb') as f:
         return hashlib.sha256(f.read()).hexdigest()
 
+def verify_document_on_blockchain(document_id):
+    """
+    Verify a document's existence on the blockchain
+
+    Args:
+        document_id: ID of the document to verify
+
+    Returns:
+        bool: Whether the document is verified on blockchain
+    """
+    document = Document.query.get(document_id)
+    if not document:
+        logger.warning(f"Document not found: {document_id}")
+        return False
+
+    try:
+        blockchain = get_blockchain_service()
+        if not blockchain:
+            logger.warning("Blockchain service not available - document verification skipped")
+            return False
+
+        logger.info(f"Attempting to verify document with hash: {document.hash}")
+
+        # Verify document on blockchain
+        result = blockchain.verify_document(document.hash)
+
+        logger.info(f"Blockchain verification result: {result}")
+
+        # Optional: Update document verification status in database
+        if result:
+            document.is_blockchain_verified = True
+            db.session.commit()
+
+        return result
+    except Exception as e:
+        logger.error(f"Verification error: {e}")
+        return False
+
 def save_uploaded_file(file, document_type, user_id, is_assignment=False, deadline=0):
     """
     Save an uploaded file and record it on blockchain
@@ -107,40 +145,41 @@ def save_uploaded_file(file, document_type, user_id, is_assignment=False, deadli
 
         return None
 
-def verify_document_on_blockchain(document_id):
+def detect_document_similarity(original_doc_path, submitted_doc_path, threshold=0.8):
     """
-    Verify a document's existence on the blockchain
+    Detect similarity between two documents
 
     Args:
-        document_id: ID of the document to verify
+        original_doc_path: Path to the original document
+        submitted_doc_path: Path to the submitted document
+        threshold: Similarity threshold (0-1)
 
     Returns:
-        bool: Whether the document is verified on blockchain
+        float: Similarity percentage
     """
-    document = Document.query.get(document_id)
-    if not document:
-        logger.warning(f"Document not found: {document_id}")
-        return False
-
     try:
-        blockchain = get_blockchain_service()
-        if not blockchain:
-            logger.warning("Blockchain service not available - document verification skipped")
-            return False
+        # Basic hash-based similarity check
+        original_hash = hash_file(original_doc_path)
+        submitted_hash = hash_file(submitted_doc_path)
 
-        logger.info(f"Attempting to verify document with hash: {document.hash}")
+        # Compute Levenshtein distance or other similarity metric
+        # This is a placeholder - you'd typically use more sophisticated plagiarism detection
+        similarity = 1 - (hamming_distance(original_hash, submitted_hash) / len(original_hash))
 
-        # Verify document on blockchain
-        result = blockchain.verify_document(document.hash)
-
-        logger.info(f"Blockchain verification result: {result}")
-
-        # Optional: Update document verification status in database
-        if result:
-            document.is_verified = True
-            db.session.commit()
-
-        return result
+        return similarity if similarity >= threshold else 0
     except Exception as e:
-        logger.error(f"Verification error: {e}")
-        return False
+        logger.error(f"Similarity detection error: {e}")
+        return 0
+
+def hamming_distance(hash1, hash2):
+    """
+    Compute Hamming distance between two hash strings
+
+    Args:
+        hash1: First hash string
+        hash2: Second hash string
+
+    Returns:
+        int: Hamming distance
+    """
+    return sum(c1 != c2 for c1, c2 in zip(hash1, hash2))

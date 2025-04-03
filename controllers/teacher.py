@@ -6,8 +6,13 @@ from models.user import User
 from models.assignment import Assignment
 from models.document import Document
 from models.submission import Submission
+from models.integrity_violation import IntegrityViolation
 from services.document_service import save_uploaded_file, verify_document_on_blockchain
 from services.grade_service import grade_submission as grade_service, verify_grade
+from services.blockchain_service import get_blockchain_service
+import logging
+
+logger = logging.getLogger(__name__)
 
 teacher = Blueprint('teacher', __name__)
 
@@ -37,11 +42,23 @@ def dashboard():
         Submission.status == 'submitted'
     ).order_by(Submission.submitted_at.desc()).limit(10).all()
 
+    # Get integrity violations for this teacher's assignments
+    integrity_violations = IntegrityViolation.query.join(
+        Document, IntegrityViolation.original_document_id == Document.id
+    ).join(
+        Submission, Document.id == Submission.document_id
+    ).join(
+        Assignment, Submission.assignment_id == Assignment.id
+    ).filter(
+        Assignment.teacher_id == user.id
+    ).all()
+
     return render_template(
         'teacher/dashboard.html',
         user=user,
         assignments=assignments,
-        pending_submissions=pending_submissions
+        pending_submissions=pending_submissions,
+        integrity_violations=integrity_violations
     )
 
 @teacher.route('/assignments')
@@ -120,115 +137,20 @@ def edit_assignment(assignment_id):
         return redirect(url_for('teacher.manage_assignments'))
 
     return render_template('teacher/edit_assignment.html', assignment=assignment, user=user)
-
-@teacher.route('/view_submissions/<int:assignment_id>')
-def view_submissions(assignment_id):
-    user = User.query.get(session['user_id'])
-    assignment = Assignment.query.get_or_404(assignment_id)
-
-    # Check if teacher owns this assignment
-    if assignment.teacher_id != user.id:
-        flash('You do not have permission to view these submissions', 'danger')
-        return redirect(url_for('teacher.manage_assignments'))
-
-    submissions = Submission.query.filter_by(assignment_id=assignment_id).all()
-
-    # Get all students (in a real app, only get enrolled students)
-    students = User.query.filter_by(role='student').all()
-
-    # Create a dictionary of student_id -> submission
-    submission_map = {s.student_id: s for s in submissions}
-
-    # Create a list of students with submission status
-    student_submissions = []
-    for student in students:
-        if student.id in submission_map:
-            sub = submission_map[student.id]
-            student_submissions.append({
-                'student': student,
-                'submission': sub,
-                'status': sub.status,
-                'on_time': sub.is_on_time(),
-                'submitted_at': sub.submitted_at
-            })
-        else:
-            student_submissions.append({
-                'student': student,
-                'submission': None,
-                'status': 'not_submitted',
-                'on_time': False,
-                'submitted_at': None
-            })
-
-    return render_template(
-        'teacher/view_submissions.html',
-        assignment=assignment,
-        student_submissions=student_submissions,
-        user=user,
-        now=datetime.utcnow()
-    )
-
-@teacher.route('/grade_submission/<int:submission_id>', methods=['GET', 'POST'])
-def grade_submission(submission_id):
-    """Grade a student submission"""
-    user = User.query.get(session['user_id'])
-    submission = Submission.query.get_or_404(submission_id)
-    assignment = submission.assignment_ref  # Changed from submission.assignment
-
-    # Check if teacher owns this assignment
-    if assignment.teacher_id != user.id:
-        flash('You do not have permission to grade this submission', 'danger')
-        return redirect(url_for('teacher.dashboard'))
-
-    if request.method == 'POST':
-        grade_value = request.form['grade']
-        feedback = request.form['feedback']
-
-        # Basic validation
-        if not grade_value or not feedback:
-            flash('Both grade and feedback are required', 'warning')
-            return redirect(url_for('teacher.grade_submission', submission_id=submission_id))
-
-        try:
-            # Call grade service to record the grade
-            success = grade_service(submission_id, grade_value, feedback, user.id)
-
-            if success:
-                flash('Submission graded successfully and recorded on blockchain!', 'success')
-            else:
-                flash('Error recording grade. Please try again.', 'danger')
-
-            return redirect(url_for('teacher.view_submissions', assignment_id=assignment.id))
-        except Exception as e:
-            print(f"Error grading submission: {str(e)}")
-            flash(f'Error grading submission: {str(e)}', 'danger')
-            return redirect(url_for('teacher.grade_submission', submission_id=submission_id))
-
-    # GET request - show grading form
-    document = submission.document_ref  # Changed from submission.document
-    student = submission.student
-
-    return render_template(
-        'teacher/grade_submission.html',
-        submission=submission,
-        assignment=assignment,
-        student=student,
-        document=document,
-        user=user
-    )
-
 @teacher.route('/view_submission/<int:submission_id>')
 def view_submission(submission_id):
     user = User.query.get(session['user_id'])
     submission = Submission.query.get_or_404(submission_id)
-    assignment = submission.assignment_ref  # Changed from submission.assignment
+
+    # Get the assignment through the relationship
+    assignment = submission.assignment
 
     # Check if teacher owns this assignment
     if assignment.teacher_id != user.id:
         flash('You do not have permission to view this submission', 'danger')
         return redirect(url_for('teacher.manage_assignments'))
 
-    document = submission.document_ref  # Changed from submission.document
+    document = submission.document
     student = submission.student
 
     # No need to verify on blockchain every time - use stored values
@@ -245,6 +167,67 @@ def view_submission(submission_id):
         student=student,
         is_verified=is_verified,
         grade_verified=grade_verified,
+        user=user
+    )
+
+@teacher.route('/grade_submission/<int:submission_id>', methods=['GET', 'POST'])
+def grade_submission(submission_id):
+    """Grade a student submission"""
+    print(f"Grading submission {submission_id}")  # Debug
+    user = User.query.get(session['user_id'])
+    submission = Submission.query.get_or_404(submission_id)
+    assignment = submission.assignment_ref  # Using assignment_ref instead of assignment
+
+    print(f"Found submission and assignment: {assignment.title}")  # Debug
+
+    # Check if teacher owns this assignment
+    if assignment.teacher_id != user.id:
+        flash('You do not have permission to grade this submission', 'danger')
+        return redirect(url_for('teacher.dashboard'))
+
+    if request.method == 'POST':
+        print("Processing POST request for grading")  # Debug
+        print(f"Form data: {request.form}")  # Debug
+
+        grade_value = request.form.get('grade')
+        feedback = request.form.get('feedback')
+
+        print(f"Grade: {grade_value}, Feedback: {feedback}")  # Debug
+
+        # Basic validation
+        if not grade_value or not feedback:
+            flash('Both grade and feedback are required', 'warning')
+            return redirect(url_for('teacher.grade_submission', submission_id=submission_id))
+
+        try:
+            # Call grade service to record the grade
+            from services.grade_service import grade_submission as grade_service
+            print("Calling grade_service")  # Debug
+            success = grade_service(submission_id, grade_value, feedback, user.id)
+            print(f"Grade service result: {success}")  # Debug
+
+            if success:
+                flash('Submission graded successfully!', 'success')
+            else:
+                flash('Error recording grade. Please try again.', 'danger')
+
+            return redirect(url_for('teacher.view_submissions', assignment_id=assignment.id))
+        except Exception as e:
+            print(f"Exception in grade_submission: {str(e)}")  # Debug
+            flash(f'Error grading submission: {str(e)}', 'danger')
+            return redirect(url_for('teacher.grade_submission', submission_id=submission_id))
+
+    # GET request - show grading form
+    document = submission.document_ref  # Using document_ref instead of document
+    student = submission.student
+
+    print(f"Rendering grade form template")  # Debug
+    return render_template(
+        'teacher/grade_submission.html',
+        submission=submission,
+        assignment=assignment,
+        student=student,
+        document=document,
         user=user
     )
 
@@ -405,3 +388,96 @@ def download_document(document_id):
         print(f"Error downloading document: {str(e)}")
         flash(f'Error downloading document: {str(e)}', 'danger')
         return redirect(url_for('teacher.dashboard'))
+
+
+
+# Ensure these functions are correctly indented within the file
+@teacher.route('/integrity_violations')
+def view_integrity_violations():
+    user = User.query.get(session['user_id'])
+
+    # Find all integrity violations for documents that belong to this teacher's assignments
+    violations = IntegrityViolation.query.join(
+        Document, IntegrityViolation.original_document_id == Document.id
+    ).join(
+        Submission, Document.id == Submission.document_id
+    ).join(
+        Assignment, Submission.assignment_id == Assignment.id
+    ).filter(
+        Assignment.teacher_id == user.id
+    ).order_by(IntegrityViolation.attempted_at.desc()).all()
+
+    return render_template(
+        'teacher/integrity_violations.html',
+        violations=violations,
+        user=user
+    )
+
+@teacher.route('/review_violation/<int:violation_id>', methods=['POST'])
+def review_violation(violation_id):
+    user = User.query.get(session['user_id'])
+    violation = IntegrityViolation.query.get_or_404(violation_id)
+
+    # Check if this violation is for a document associated with this teacher's assignment
+    original_doc = Document.query.get(violation.original_document_id)
+    submission = Submission.query.filter_by(document_id=original_doc.id).first()
+
+    if not submission or submission.assignment.teacher_id != user.id:
+        flash('You do not have permission to review this violation', 'danger')
+        return redirect(url_for('teacher.dashboard'))
+
+    # Update the violation record
+    violation.reviewed = True
+    violation.notes = request.form.get('notes', '')
+
+    db.session.commit()
+    flash('Integrity violation marked as reviewed', 'success')
+
+    return redirect(url_for('teacher.view_integrity_violations'))
+
+@teacher.route('/view_submissions/<int:assignment_id>')
+def view_submissions(assignment_id):
+    user = User.query.get(session['user_id'])
+    assignment = Assignment.query.get_or_404(assignment_id)
+
+    # Check if teacher owns this assignment
+    if assignment.teacher_id != user.id:
+        flash('You do not have permission to view these submissions', 'danger')
+        return redirect(url_for('teacher.manage_assignments'))
+
+    submissions = Submission.query.filter_by(assignment_id=assignment_id).all()
+
+    # Get all students (in a real app, only get enrolled students)
+    students = User.query.filter_by(role='student').all()
+
+    # Create a dictionary of student_id -> submission
+    submission_map = {s.student_id: s for s in submissions}
+
+    # Create a list of students with submission status
+    student_submissions = []
+    for student in students:
+        if student.id in submission_map:
+            sub = submission_map[student.id]
+            student_submissions.append({
+                'student': student,
+                'submission': sub,
+                'status': sub.status,
+                'on_time': sub.is_on_time(),
+                'submitted_at': sub.submitted_at
+            })
+        else:
+            student_submissions.append({
+                'student': student,
+                'submission': None,
+                'status': 'not_submitted',
+                'on_time': False,
+                'submitted_at': None
+            })
+
+    return render_template(
+        'teacher/view_submissions.html',
+        assignment=assignment,
+        student_submissions=student_submissions,
+        user=user,
+        now=datetime.utcnow()
+    )

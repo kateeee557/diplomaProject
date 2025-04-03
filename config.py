@@ -31,7 +31,7 @@ class DevelopmentConfig(Config):
     GAS_PRICE = 20000000000  # 20 gwei
 
     # Switch to disable blockchain for development if needed
-    BLOCKCHAIN_ENABLED = True
+    BLOCKCHAIN_ENABLED = False  # Changed to False to run in offline mode
 
     # Logging configuration
     LOGGING_CONFIG = {
@@ -73,6 +73,7 @@ class TestingConfig(DevelopmentConfig):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = 'sqlite:///test_academic_platform.db'
     BLOCKCHAIN_PROVIDER = 'http://127.0.0.1:7546'  # Test blockchain
+    BLOCKCHAIN_ENABLED = False  # Also set to False for testing
 
 class ProductionConfig(Config):
     DEBUG = False
@@ -91,6 +92,7 @@ class ProductionConfig(Config):
     BLOCKCHAIN_MAX_RETRIES = int(os.environ.get('BLOCKCHAIN_MAX_RETRIES', 3))
     GAS_LIMIT = int(os.environ.get('GAS_LIMIT', 3000000))
     GAS_PRICE = int(os.environ.get('GAS_PRICE', 20000000000))
+    BLOCKCHAIN_ENABLED = os.environ.get('BLOCKCHAIN_ENABLED', 'False').lower() == 'true'
 
     # Logging for production
     LOGGING_CONFIG = {

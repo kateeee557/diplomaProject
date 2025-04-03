@@ -1,14 +1,15 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session, send_from_directory, \
-    current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, send_from_directory, current_app
 from datetime import datetime
-import hashlib
 import os
+import uuid
+import hashlib
 from app import db
 from models.user import User
 from models.assignment import Assignment
 from models.document import Document
 from models.submission import Submission
-from services.document_service import save_uploaded_file
+from models.integrity_violation import IntegrityViolation
+from services.document_service import save_uploaded_file, hash_file, detect_document_similarity
 from services.token_service import get_token_balance, get_user_transactions
 from services.blockchain_service import get_blockchain_service
 
@@ -93,13 +94,13 @@ def submit_assignment(assignment_id):
 
         if 'file' not in request.files:
             flash('No file selected', 'danger')
-            return render_template('student/submit_assignment.html', assignment=assignment, user=user)
+            return render_template('student/submit_assignment.html', assignment=assignment, user=user, now=datetime.utcnow())
 
         file = request.files['file']
 
         if file.filename == '':
             flash('No file selected', 'danger')
-            return render_template('student/submit_assignment.html', assignment=assignment, user=user)
+            return render_template('student/submit_assignment.html', assignment=assignment, user=user, now=datetime.utcnow())
 
         # Get deadline in Unix timestamp
         deadline_timestamp = int(assignment.deadline.timestamp())
@@ -135,7 +136,34 @@ def submit_assignment(assignment_id):
 
             return redirect(url_for('student.view_assignments'))
         else:
-            flash('Error saving submission', 'danger')
+            # Check if this was a duplicate document
+            # Create a temporary file to get the hash
+            temp_file = file
+            temp_file.seek(0)  # Reset file pointer
+
+            # Save to a temporary location
+            temp_path = os.path.join(current_app.config['UPLOAD_FOLDER'], 'temp_check_' + str(uuid.uuid4()))
+            temp_file.save(temp_path)
+
+            # Calculate hash
+            temp_hash = hash_file(temp_path)
+
+            # Remove temporary file
+            os.remove(temp_path)
+
+            # Check if this hash exists in the database
+            existing_doc = Document.query.filter_by(hash=temp_hash).first()
+
+            if existing_doc:
+                # It's a duplicate document
+                existing_owner = User.query.get(existing_doc.user_id)
+
+                if existing_owner.id == user.id:
+                    flash('You have already uploaded this document. Please submit a different file.', 'warning')
+                else:
+                    flash('This document appears to be identical to one already in the system. This has been flagged as a potential academic integrity violation.', 'danger')
+            else:
+                flash('Error saving submission. Please try again.', 'danger')
 
     # GET request - show submission form
     return render_template(
