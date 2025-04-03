@@ -14,9 +14,8 @@
                 <thead>
                 <tr>
                     <th>Original Document</th>
-                    <th>Attempted Document</th>
-                    <th>Violation Type</th>
-                    <th>Similarity</th>
+                    <th>Student</th>
+                    <th>Violation Details</th>
                     <th>Attempted At</th>
                     <th>Status</th>
                     <th>Actions</th>
@@ -26,17 +25,17 @@
                 {% for violation in violations %}
                 <tr class="{{ 'table-warning' if not violation.reviewed else '' }}">
                     <td>
-                        <a href="{{ url_for('teacher.view_document', document_id=violation.original_document_id) }}" class="btn btn-sm btn-info">
+                        <a href="{{ url_for('teacher.download_document', document_id=violation.original_document_id) }}" class="btn btn-sm btn-info">
                             {{ violation.original_document.original_filename }}
                         </a>
                     </td>
                     <td>
-                        <a href="{{ url_for('teacher.view_document', document_id=violation.attempted_document_id) }}" class="btn btn-sm btn-warning">
-                            {{ violation.attempted_document.original_filename }}
-                        </a>
+                        {{ violation.user.name }}
                     </td>
-                    <td>{{ violation.violation_type }}</td>
-                    <td>{{ violation.similarity_percentage|round(2) }}%</td>
+                    <td>
+                        <span class="badge bg-danger">Duplicate Submission</span>
+                        <div class="small text-muted mt-1">Document hash: {{ violation.document_hash|truncate(15) }}</div>
+                    </td>
                     <td>{{ violation.attempted_at.strftime('%Y-%m-%d %H:%M') }}</td>
                     <td>
                         {% if violation.reviewed %}

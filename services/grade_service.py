@@ -15,7 +15,7 @@ def grade_submission(submission_id, grade, feedback, teacher_id):
 
     Args:
         submission_id: ID of the submission to grade
-        grade: Grade to assign (e.g., 'A', 'B+', '95%')
+        grade: Grade to assign as a percentage (0-100)
         feedback: Feedback text
         teacher_id: ID of the teacher grading
 
@@ -34,12 +34,30 @@ def grade_submission(submission_id, grade, feedback, teacher_id):
         logger.error(f"Document not found for submission: {submission_id}")
         return False
 
+    # Validate and format grade as percentage
+    try:
+        # Handle percentage input
+        grade_value = float(grade)
+
+        # Ensure the grade is within range
+        if grade_value < 0:
+            grade_value = 0
+        elif grade_value > 100:
+            grade_value = 100
+
+        # Format the grade with % symbol for storage
+        grade = f"{grade_value:.1f}%"
+    except (ValueError, TypeError):
+        logger.error(f"Invalid grade format: {grade}")
+        grade_value = 0
+        grade = "0.0%"
+
     # Create a hash of the grading data
     now = datetime.utcnow()
     grade_data = f"{submission.id}:{grade}:{feedback}:{now.isoformat()}"
     grade_hash = int(hashlib.sha256(grade_data.encode()).hexdigest(), 16) % 10**20  # Truncate to fit uint256
 
-    # Initialize variables
+    # Initialize variables for blockchain data
     tx_hash = f"offline-{int(datetime.utcnow().timestamp())}"  # Default offline tx hash
 
     try:
@@ -47,16 +65,19 @@ def grade_submission(submission_id, grade, feedback, teacher_id):
         try:
             blockchain = get_blockchain_service()
             if blockchain and document.nft_token_id and not blockchain.offline_mode:
-                account = blockchain.get_account()  # For testing
+                account = blockchain.get_account()  # For testing - in production use user's address
 
-                receipt, blockchain_tx_hash = blockchain.record_grade(
+                logger.info(f"Attempting to mint document on blockchain: {file_hash}")
+
+                # Mint NFT
+                receipt, tx_hash = blockchain.record_grade(
                     document.nft_token_id,
                     grade_hash,
                     account
                 )
 
-                if blockchain_tx_hash and blockchain_tx_hash != "0x0":
-                    tx_hash = blockchain_tx_hash  # Only update if we got a real hash
+                if tx_hash and tx_hash != "0x0":
+                    tx_hash = tx_hash  # Only update if we got a real hash
 
                 logger.info(f"Grade recorded on blockchain: tx_hash={tx_hash}")
             else:
@@ -64,23 +85,6 @@ def grade_submission(submission_id, grade, feedback, teacher_id):
         except Exception as e:
             logger.error(f"Error recording grade on blockchain: {e}")
             logger.warning("Continuing with database-only grade recording")
-
-        # Convert grade to numeric for token rewards
-        try:
-            # Handle different grade formats
-            if isinstance(grade, str):
-                if '%' in grade:
-                    grade_value = float(grade.replace('%', ''))
-                elif grade in ['A', 'A+']:
-                    grade_value = 95
-                elif grade in ['B', 'B+']:
-                    grade_value = 85
-                else:
-                    grade_value = 0
-            else:
-                grade_value = float(grade)
-        except (ValueError, TypeError):
-            grade_value = 0
 
         # Token reward logic
         try:
@@ -98,6 +102,12 @@ def grade_submission(submission_id, grade, feedback, teacher_id):
                     submission.student_id,
                     5,
                     "Excellent assignment performance"
+                )
+            elif grade_value >= 85:
+                record_token_reward(
+                    submission.student_id,
+                    3,
+                    "Good assignment performance"
                 )
         except Exception as reward_error:
             logger.error(f"Token reward error: {reward_error}")

@@ -62,17 +62,7 @@
                 </li>
                 {% endif %}
 
-                <!-- Blockchain status indicator -->
-                <li class="nav-item">
-                    <a class="nav-link {% if request.endpoint == 'blockchain.blockchain_status' %}active{% endif %}" href="{{ url_for('blockchain.blockchain_status') }}">
-                            <span id="blockchain-status-indicator" class="blockchain-status-unknown">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-hdd-network" viewBox="0 0 16 16">
-                                    <path d="M4.5 5.1a.5.5 0 0 0-.5.5v1a.5.5 0 0 1-1 0v-1A1.5 1.5 0 0 1 4.5 4h7A1.5 1.5 0 0 1 13 5.5v1a.5.5 0 0 1-1 0v-1a.5.5 0 0 0-.5-.5h-7zM4.5 10.1a.5.5 0 0 0-.5.5v1a.5.5 0 0 1-1 0v-1A1.5 1.5 0 0 1 4.5 9h7A1.5 1.5 0 0 1 13 10.5v1a.5.5 0 0 1-1 0v-1a.5.5 0 0 0-.5-.5h-7zM0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm0 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-1zm6.5-7a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm0 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
-                                </svg>
-                                Blockchain
-                            </span>
-                    </a>
-                </li>
+                <!-- Blockchain status indicator removed from navbar -->
                 {% endif %}
             </ul>
             <div class="d-flex">
@@ -108,6 +98,11 @@
 <footer class="bg-light py-3 mt-5">
     <div class="container text-center">
         <p class="mb-0">&copy; 2025 Academic Blockchain - Digital University Platform</p>
+
+        <!-- Developer-only blockchain status indicator -->
+        {% if session.user_id %}
+        <a href="{{ url_for('blockchain.blockchain_status') }}" class="dev-blockchain-indicator" id="blockchain-status-indicator" title="Blockchain Status">●</a>
+        {% endif %}
     </div>
 </footer>
 {% endblock %}
@@ -150,6 +145,17 @@
 
 <!-- Additional blockchain status style -->
 <style>
+    /* Discreet developer blockchain status indicator */
+    .dev-blockchain-indicator {
+        position: fixed;
+        bottom: 5px;
+        right: 5px;
+        font-size: 16px;
+        text-decoration: none;
+        opacity: 0.5;
+        z-index: 1000;
+    }
+
     .blockchain-status-online {
         color: #10b981; /* Green */
     }

@@ -199,6 +199,16 @@ def grade_submission(submission_id):
             flash('Both grade and feedback are required', 'warning')
             return redirect(url_for('teacher.grade_submission', submission_id=submission_id))
 
+        # Validate grade is a number between 0-100
+        try:
+            grade_float = float(grade_value)
+            if grade_float < 0 or grade_float > 100:
+                flash('Grade must be a percentage between 0 and 100', 'warning')
+                return redirect(url_for('teacher.grade_submission', submission_id=submission_id))
+        except ValueError:
+            flash('Grade must be a valid number', 'warning')
+            return redirect(url_for('teacher.grade_submission', submission_id=submission_id))
+
         try:
             # Call grade service to record the grade
             from services.grade_service import grade_submission as grade_service

@@ -12,6 +12,9 @@ from models.integrity_violation import IntegrityViolation
 from services.document_service import save_uploaded_file, hash_file, detect_document_similarity
 from services.token_service import get_token_balance, get_user_transactions
 from services.blockchain_service import get_blockchain_service
+from models.integrity_violation import IntegrityViolation
+import logging
+logger = logging.getLogger(__name__)
 
 student = Blueprint('student', __name__)
 
@@ -102,68 +105,105 @@ def submit_assignment(assignment_id):
             flash('No file selected', 'danger')
             return render_template('student/submit_assignment.html', assignment=assignment, user=user, now=datetime.utcnow())
 
+        # Save to a temporary location to get the hash
+        temp_path = os.path.join(current_app.config['UPLOAD_FOLDER'], 'temp_check_' + str(uuid.uuid4()))
+        file.save(temp_path)
+
+        # Calculate hash
+        temp_hash = hash_file(temp_path)
+
+        # Reset file pointer for later use
+        file.seek(0)
+
+        # Make sure the database session is in a clean state
+        db.session.rollback()
+
+        # Check if this hash exists in the database
+        existing_doc = Document.query.filter_by(hash=temp_hash).first()
+
+        if existing_doc:
+            # It's a duplicate document - handle potential academic integrity violation
+            os.remove(temp_path)  # Clean up temp file
+
+            # Check if the existing document belongs to this student
+            if existing_doc.user_id == user.id:
+                flash('You have already uploaded this document. Please submit a different file.', 'warning')
+                return render_template('student/submit_assignment.html', assignment=assignment, user=user, now=datetime.utcnow())
+            else:
+                # Potential academic integrity violation - log it
+                try:
+                    violation = IntegrityViolation(
+                        user_id=user.id,
+                        document_hash=temp_hash,
+                        original_document_id=existing_doc.id,
+                        attempted_at=datetime.utcnow()
+                    )
+                    db.session.add(violation)
+                    db.session.commit()
+
+                    logger.warning(f"Academic integrity violation detected: User {user.id} attempted to submit document with same hash as document {existing_doc.id}")
+                    flash('This document appears to be identical to one already in the system. This has been flagged as a potential academic integrity violation.', 'danger')
+                except Exception as e:
+                    db.session.rollback()
+                    logger.error(f"Error recording integrity violation: {e}")
+                    flash('Error processing your submission. Please try again or contact support.', 'danger')
+
+                return render_template('student/submit_assignment.html', assignment=assignment, user=user, now=datetime.utcnow())
+
         # Get deadline in Unix timestamp
         deadline_timestamp = int(assignment.deadline.timestamp())
 
-        # Save document and mint NFT
-        document = save_uploaded_file(
-            file=file,
-            document_type='assignment_submission',
-            user_id=user.id,
-            is_assignment=True,
-            deadline=deadline_timestamp
-        )
-
-        if document:
-            # Create submission record
-            submission = Submission(
-                assignment_id=assignment.id,
-                student_id=user.id,
-                document_id=document.id,
-                submitted_at=datetime.utcnow(),
-                status='submitted'
+        try:
+            # Save document and mint NFT
+            document = save_uploaded_file(
+                file=file,
+                document_type='assignment_submission',
+                user_id=user.id,
+                is_assignment=True,
+                deadline=deadline_timestamp
             )
 
-            db.session.add(submission)
-            db.session.commit()
+            if document:
+                # Create submission record
+                submission = Submission(
+                    assignment_id=assignment.id,
+                    student_id=user.id,
+                    document_id=document.id,
+                    submitted_at=datetime.utcnow(),
+                    status='submitted'
+                )
 
-            # Check if on-time
-            on_time = datetime.utcnow() <= assignment.deadline
-            if on_time:
-                flash('Assignment submitted on time! 10 tokens awarded!', 'success')
-            else:
-                flash('Assignment submitted, but after the deadline (no tokens awarded)', 'warning')
+                db.session.add(submission)
+                db.session.commit()
 
-            return redirect(url_for('student.view_assignments'))
-        else:
-            # Check if this was a duplicate document
-            # Create a temporary file to get the hash
-            temp_file = file
-            temp_file.seek(0)  # Reset file pointer
-
-            # Save to a temporary location
-            temp_path = os.path.join(current_app.config['UPLOAD_FOLDER'], 'temp_check_' + str(uuid.uuid4()))
-            temp_file.save(temp_path)
-
-            # Calculate hash
-            temp_hash = hash_file(temp_path)
-
-            # Remove temporary file
-            os.remove(temp_path)
-
-            # Check if this hash exists in the database
-            existing_doc = Document.query.filter_by(hash=temp_hash).first()
-
-            if existing_doc:
-                # It's a duplicate document
-                existing_owner = User.query.get(existing_doc.user_id)
-
-                if existing_owner.id == user.id:
-                    flash('You have already uploaded this document. Please submit a different file.', 'warning')
+                # Check if on-time
+                on_time = datetime.utcnow() <= assignment.deadline
+                if on_time:
+                    flash('Assignment submitted on time! 10 tokens awarded!', 'success')
                 else:
-                    flash('This document appears to be identical to one already in the system. This has been flagged as a potential academic integrity violation.', 'danger')
+                    flash('Assignment submitted, but after the deadline (no tokens awarded)', 'warning')
+
+                return redirect(url_for('student.view_assignments'))
             else:
                 flash('Error saving submission. Please try again.', 'danger')
+                # Clean up temp file if still exists
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                return render_template('student/submit_assignment.html', assignment=assignment, user=user, now=datetime.utcnow())
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Submission error: {str(e)}")
+            flash('Error processing your submission. Please try again.', 'danger')
+            # Clean up temp file if still exists
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            return render_template('student/submit_assignment.html', assignment=assignment, user=user, now=datetime.utcnow())
+
+        finally:
+            # Make sure temp file is removed in all cases
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
 
     # GET request - show submission form
     return render_template(
