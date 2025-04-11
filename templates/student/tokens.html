@@ -10,7 +10,17 @@
         <h4 class="mb-0">Token Balance</h4>
       </div>
       <div class="card-body text-center">
-        <div class="display-1 mb-3">{{ token_balance }}</div>
+        <!-- Calculate total from transactions to ensure consistency -->
+        {% set total_balance = 0 %}
+        {% for transaction in transactions %}
+        {% if transaction.transaction_type == 'reward' %}
+        {% set total_balance = total_balance + transaction.amount %}
+        {% elif transaction.transaction_type == 'spend' %}
+        {% set total_balance = total_balance - transaction.amount %}
+        {% endif %}
+        {% endfor %}
+
+        <div class="display-1 mb-3">{{ total_balance }}</div>
         <h5 class="mb-3">Academic Tokens (ACT)</h5>
 
         <div class="d-flex align-items-center justify-content-center mb-3">

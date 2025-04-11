@@ -53,8 +53,26 @@ class User(db.Model):
             self.total_tokens_spent += amount
 
     def get_token_balance(self):
-        """Calculate current token balance"""
-        return self.total_tokens_earned - self.total_tokens_spent
+        """Calculate current token balance from transactions"""
+        from app import db
+        from models.token import TokenTransaction
+
+        # Query rewards and spends separately
+        rewards = TokenTransaction.query.filter_by(
+            user_id=self.id,
+            transaction_type='reward'
+        ).all()
+
+        spends = TokenTransaction.query.filter_by(
+            user_id=self.id,
+            transaction_type='spend'
+        ).all()
+
+        # Calculate the total balance
+        total_rewards = sum(t.amount for t in rewards)
+        total_spends = sum(t.amount for t in spends)
+
+        return total_rewards - total_spends
 
     def increment_blockchain_nonce(self):
         """Increment nonce for additional security"""

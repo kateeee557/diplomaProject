@@ -15,7 +15,7 @@ def get_token_balance(user_id):
     try:
         # Try to get balance from blockchain
         blockchain = get_blockchain_service()
-        if blockchain:
+        if blockchain and blockchain.is_connected():
             balance = blockchain.get_user_token_balance(user.blockchain_address)
             return balance
         else:
@@ -24,11 +24,22 @@ def get_token_balance(user_id):
         logger.error(f"Error getting token balance from blockchain: {e}")
         logger.warning("Falling back to database balance")
 
-    # Fallback to database balance
-    transactions = TokenTransaction.query.filter_by(user_id=user_id).all()
-    balance = sum(t.amount if t.transaction_type == 'reward' else -t.amount
-                  for t in transactions)
-    return balance
+    # Fallback to database balance - calculate from transactions
+    # Fix: Make sure we're properly summing up the rewards and subtracting spends
+    rewards = TokenTransaction.query.filter_by(
+        user_id=user_id,
+        transaction_type='reward'
+    ).all()
+
+    spends = TokenTransaction.query.filter_by(
+        user_id=user_id,
+        transaction_type='spend'
+    ).all()
+
+    total_rewards = sum(t.amount for t in rewards)
+    total_spends = sum(t.amount for t in spends)
+
+    return total_rewards - total_spends
 
 def record_token_reward(user_id, amount, description, transaction_hash=None):
     """Record a token reward transaction"""
@@ -43,7 +54,7 @@ def record_token_reward(user_id, amount, description, transaction_hash=None):
         # Try to record on blockchain
         try:
             blockchain = get_blockchain_service()
-            if blockchain and user.blockchain_address:
+            if blockchain and blockchain.is_connected() and user.blockchain_address:
                 # Record on blockchain
                 receipt = blockchain.track_token_earning(
                     user.blockchain_address,
@@ -70,14 +81,11 @@ def record_token_reward(user_id, amount, description, transaction_hash=None):
         )
 
         db.session.add(transaction)
-        db.session.commit()
 
-        # Update user's total tokens earned
-        try:
-            user.total_tokens_earned += amount
-            db.session.commit()
-        except Exception as e:
-            logger.error(f"Error updating user token stats: {e}")
+        # Fix: Make sure we update user's total_tokens_earned properly
+        user.total_tokens_earned += amount
+
+        db.session.commit()
 
         return transaction
     except Exception as e:
@@ -104,9 +112,9 @@ def record_token_spend(user_id, amount, description, transaction_hash=None):
         # Try to record on blockchain
         try:
             blockchain = get_blockchain_service()
-            if blockchain and user.blockchain_address:
+            if blockchain and blockchain.is_connected() and user.blockchain_address:
                 # Record on blockchain
-                blockchain.token_tracker_contract.functions.spendTokens(
+                receipt = blockchain.token_tracker_contract.functions.spendTokens(
                     user.blockchain_address,
                     amount,
                     description
@@ -130,12 +138,10 @@ def record_token_spend(user_id, amount, description, transaction_hash=None):
 
         db.session.add(transaction)
 
-        # Update user's total tokens spent
-        try:
-            user.total_tokens_spent += amount
-            db.session.commit()
-        except Exception as e:
-            logger.error(f"Error updating user token stats: {e}")
+        # Fix: Make sure we update user's total_tokens_spent properly
+        user.total_tokens_spent += amount
+
+        db.session.commit()
 
         return transaction
     except Exception as e:
