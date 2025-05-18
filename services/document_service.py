@@ -40,6 +40,15 @@ def verify_document_on_blockchain(document_id):
             logger.warning("Blockchain service not available - document verification skipped")
             return False
 
+        # Check if we're in offline mode
+        if blockchain.offline_mode:
+            # If in offline mode, use the document's actual ID instead of a fixed "1"
+            document.nft_token_id = document.id  # Use document ID as NFT ID
+            document.is_blockchain_verified = True
+            db.session.commit()
+            logger.info(f"Offline mode: Verified document ID {document_id} with mock NFT ID {document.id}")
+            return True
+
         logger.info(f"Attempting to verify document with hash: {document.hash}")
 
         # Verify document on blockchain

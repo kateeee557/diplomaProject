@@ -8,24 +8,7 @@ logger = logging.getLogger(__name__)
 
 def get_token_balance(user_id):
     """Get token balance for a user"""
-    user = User.query.get(user_id)
-    if not user or not user.blockchain_address:
-        return 0
-
-    try:
-        # Try to get balance from blockchain
-        blockchain = get_blockchain_service()
-        if blockchain and blockchain.is_connected():
-            balance = blockchain.get_user_token_balance(user.blockchain_address)
-            return balance
-        else:
-            logger.warning("Blockchain service not available - using database balance")
-    except Exception as e:
-        logger.error(f"Error getting token balance from blockchain: {e}")
-        logger.warning("Falling back to database balance")
-
-    # Fallback to database balance - calculate from transactions
-    # Fix: Make sure we're properly summing up the rewards and subtracting spends
+    # First calculate from database transactions
     rewards = TokenTransaction.query.filter_by(
         user_id=user_id,
         transaction_type='reward'
@@ -39,7 +22,25 @@ def get_token_balance(user_id):
     total_rewards = sum(t.amount for t in rewards)
     total_spends = sum(t.amount for t in spends)
 
-    return total_rewards - total_spends
+    db_balance = total_rewards - total_spends
+
+    # If the database has a balance, use it
+    if db_balance > 0:
+        return db_balance
+
+    # Otherwise try blockchain if available
+    user = User.query.get(user_id)
+    if user and user.blockchain_address:
+        try:
+            blockchain = get_blockchain_service()
+            if blockchain and blockchain.is_connected():
+                balance = blockchain.get_user_token_balance(user.blockchain_address)
+                return balance
+        except Exception as e:
+            logger.error(f"Error getting token balance from blockchain: {e}")
+
+    # Return the database balance as default
+    return db_balance
 
 def record_token_reward(user_id, amount, description, transaction_hash=None):
     """Record a token reward transaction"""

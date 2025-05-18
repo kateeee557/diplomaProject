@@ -10,17 +10,8 @@
         <h4 class="mb-0">Token Balance</h4>
       </div>
       <div class="card-body text-center">
-        <!-- Calculate total from transactions to ensure consistency -->
-        {% set total_balance = 0 %}
-        {% for transaction in transactions %}
-        {% if transaction.transaction_type == 'reward' %}
-        {% set total_balance = total_balance + transaction.amount %}
-        {% elif transaction.transaction_type == 'spend' %}
-        {% set total_balance = total_balance - transaction.amount %}
-        {% endif %}
-        {% endfor %}
 
-        <div class="display-1 mb-3">{{ total_balance }}</div>
+        <div class="display-1 mb-3">{{ token_balance }}</div>
         <h5 class="mb-3">Academic Tokens (ACT)</h5>
 
         <div class="d-flex align-items-center justify-content-center mb-3">
@@ -57,19 +48,19 @@
       <div class="card-body">
         <ul class="list-group list-group-flush">
           <li class="list-group-item d-flex align-items-center">
-            <div class="badge bg-primary rounded-pill me-2">25</div>
+            <div class="badge bg-primary rounded-pill me-2">5</div>
             <div>Extended deadline for one assignment</div>
           </li>
           <li class="list-group-item d-flex align-items-center">
-            <div class="badge bg-primary rounded-pill me-2">50</div>
-            <div>Certificate of academic achievement</div>
+            <div class="badge bg-primary rounded-pill me-2">3</div>
+            <div> Good assignment performance</div>
           </li>
           <li class="list-group-item d-flex align-items-center">
-            <div class="badge bg-primary rounded-pill me-2">100</div>
+            <div class="badge bg-primary rounded-pill me-2">10</div>
             <div>Priority registration for next semester</div>
           </li>
           <li class="list-group-item d-flex align-items-center">
-            <div class="badge bg-primary rounded-pill me-2">200</div>
+            <div class="badge bg-primary rounded-pill me-2">20</div>
             <div>Special academic recognition</div>
           </li>
         </ul>
@@ -120,7 +111,7 @@
                 <span class="text-danger">-{{ transaction.amount }}</span>
                 {% endif %}
               </td>
-              <td>{{ transaction.description }}</td>
+              <td>{{ transaction.exit }}</td>
               <td>
                 {% if transaction.blockchain_tx %}
                 <a href="#" data-bs-toggle="tooltip" title="{{ transaction.blockchain_tx }}" class="text-decoration-none">
@@ -162,7 +153,7 @@
           <div class="col-md-6">
             <h5>How to Earn Tokens</h5>
             <ul>
-              <li>Submit assignments before deadlines (10 tokens)</li>
+              <li>Submit assignments before deadlines (3 tokens)</li>
               <li>Achieve high grades on assessments</li>
               <li>Participate in academic activities</li>
               <li>Complete special academic challenges</li>

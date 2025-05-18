@@ -11,11 +11,11 @@ Academic Blockchain is an innovative digital platform that leverages blockchain 
 - 📊 Transparent Grading Mechanism
 
  Technology Stack
-- **Backend**: Python (Flask)
-- **Blockchain**: Ethereum-based Smart Contracts (Solidity)
-- **Frontend**: Bootstrap, HTML/CSS
-- **Database**: SQLAlchemy
-- **Blockchain Interaction**: Web3.py
+- Backend: Python (Flask)
+- Blockchain: Ethereum-based Smart Contracts (Solidity)
+- Frontend: Bootstrap, HTML/CSS
+- Database: SQLAlchemy
+- Blockchain Interaction: Web3.py
 
 Installation Requirements
 Prerequisites
@@ -27,7 +27,7 @@ Prerequisites
 Setup Steps
 1. Clone the repository
 
-git clone https://github.com/yourusername/academic-blockchain.git
+git clone https://github.com/kateeee557/diplomaProject.git
 cd academic-blockchain
 
 
@@ -53,10 +53,10 @@ python run.py
 
 
 Blockchain Components
-- **AcademicToken**: ERC20 token for rewards
-- **DocumentNFT**: ERC721 token for document verification
-- **UserAddressFactory**: Manages user blockchain wallets
-- **UserTokenTracker**: Tracks token earnings and spending
+- AcademicToken: ERC20 token for rewards
+- DocumentNFT: ERC721 token for document verification
+- UserAddressFactory: Manages user blockchain wallets
+- UserTokenTracker: Tracks token earnings and spending
 
 User Roles
  Student
