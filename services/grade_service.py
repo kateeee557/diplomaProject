@@ -67,9 +67,11 @@ def grade_submission(submission_id, grade, feedback, teacher_id):
             if blockchain and document.nft_token_id and not blockchain.offline_mode:
                 account = blockchain.get_account()  # For testing - in production use user's address
 
-                logger.info(f"Attempting to mint document on blockchain: {file_hash}")
+                logger.info(
+                    f"Attempting to record grade on blockchain: token_id={document.nft_token_id}, grade_hash={grade_hash}"
+                )
 
-                # Mint NFT
+                # Record grade on chain
                 receipt, tx_hash = blockchain.record_grade(
                     document.nft_token_id,
                     grade_hash,
