@@ -68,7 +68,7 @@ def grade_submission(submission_id, grade, feedback, teacher_id):
                 account = blockchain.get_account()  # For testing - in production use user's address
 
                 logger.info(
-                    f"Attempting to record grade on blockchain: token_id={document.nft_token_id}, grade_hash={grade_hash}"
+                    f"Recording grade on blockchain: {grade_hash}"
                 )
 
                 # Record grade on chain
